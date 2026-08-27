@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="DayMendesStore.API/DayMendesStore.API.csproj" />
+  <Project Path="DayMendesStore.Application/DayMendesStore.Application.csproj" />
+  <Project Path="DayMendesStore.Domain/DayMendesStore.Domain.csproj" />
+  <Project Path="DayMendesStore.Infrastructure/DayMendesStore.Infrastructure.csproj" />
+</Solution>

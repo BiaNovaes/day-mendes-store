@@ -1,0 +1,6 @@
+@DayMendesStore.API_HostAddress = http://localhost:5114
+
+GET {{DayMendesStore.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
