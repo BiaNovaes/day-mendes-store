@@ -44,3 +44,7 @@ desktop.ini
 
 # ASP.NET Development
 appsettings.Local.json
+
+# Uploads
+backend/DayMendesStore.API/wwwroot/uploads/*
+!backend/DayMendesStore.API/wwwroot/uploads/.gitkeep
