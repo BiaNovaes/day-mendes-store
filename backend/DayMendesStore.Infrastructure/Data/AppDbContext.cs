@@ -96,6 +96,7 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Tamanho).IsRequired().HasMaxLength(20);
             entity.Property(e => e.Cor).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.CodigoBarras).HasMaxLength(80);
             entity.Property(e => e.QuantidadeEstoque).IsRequired();
 
             entity.HasOne(e => e.Produto)
@@ -104,6 +105,9 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(e => new { e.ProdutoId, e.Tamanho, e.Cor })
+                .IsUnique();
+
+            entity.HasIndex(e => e.CodigoBarras)
                 .IsUnique();
         });
 

@@ -8,6 +8,7 @@ public class VariacaoProdutoDto
     public int ProdutoId { get; set; }
     public string Tamanho { get; set; } = string.Empty;
     public string Cor { get; set; } = string.Empty;
+    public string? CodigoBarras { get; set; }
     public int QuantidadeEstoque { get; set; }
     public Status Status { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -18,6 +19,7 @@ public class VariacaoProdutoCreateDto
 {
     public string Tamanho { get; set; } = string.Empty;
     public string Cor { get; set; } = string.Empty;
+    public string? CodigoBarras { get; set; }
     public int QuantidadeEstoque { get; set; }
 }
 
@@ -26,6 +28,7 @@ public class VariacaoProdutoUpdateDto
     public int? Id { get; set; }
     public string Tamanho { get; set; } = string.Empty;
     public string Cor { get; set; } = string.Empty;
+    public string? CodigoBarras { get; set; }
     public int QuantidadeEstoque { get; set; }
     public Status? Status { get; set; }
 }
@@ -85,6 +88,7 @@ public class ProdutoFiltroDto : PaginationParamsDto
     public int? CategoriaId { get; set; }
     public string? Tamanho { get; set; }
     public string? Cor { get; set; }
+    public string? CodigoBarras { get; set; }
     public Status? Status { get; set; }
     public bool? ApenasEmEstoque { get; set; }
     public bool? ApenasEstoqueBaixo { get; set; }

@@ -163,6 +163,7 @@ public class ProdutoService : IProdutoService
                     Produto = produto,
                     Tamanho = vDto.Tamanho?.Trim() ?? string.Empty,
                     Cor = vDto.Cor?.Trim() ?? string.Empty,
+                    CodigoBarras = string.IsNullOrWhiteSpace(vDto.CodigoBarras) ? null : vDto.CodigoBarras.Trim(),
                     QuantidadeEstoque = vDto.QuantidadeEstoque,
                     Status = Status.Ativo,
                     CreatedAt = DateTime.UtcNow
@@ -548,6 +549,7 @@ public class ProdutoService : IProdutoService
                 ProdutoId = v.ProdutoId,
                 Tamanho = v.Tamanho,
                 Cor = v.Cor,
+                CodigoBarras = v.CodigoBarras,
                 QuantidadeEstoque = v.QuantidadeEstoque,
                 Status = v.Status,
                 CreatedAt = v.CreatedAt,
