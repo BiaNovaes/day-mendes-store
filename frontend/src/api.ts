@@ -227,6 +227,24 @@ export function hasAuthToken() {
   return Boolean(authToken)
 }
 
+async function parseErrorMessage(response: Response): Promise<string> {
+  const text = await response.text()
+  if (!text) return `Erro ${response.status} ao chamar a API`
+  try {
+    const data = JSON.parse(text)
+    if (data && typeof data === 'object') {
+      if (typeof data.message === 'string' && data.message.trim()) {
+        return data.message.trim()
+      }
+      if (typeof data.detail === 'string' && data.detail.trim()) {
+        return data.detail.trim()
+      }
+    }
+  } catch {
+  }
+  return text
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers)
   if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
@@ -234,8 +252,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers })
   if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `Erro ${response.status} ao chamar a API`)
+    const message = await parseErrorMessage(response)
+    throw new Error(message)
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
@@ -247,8 +265,8 @@ async function requestBlob(path: string, options: RequestInit = {}): Promise<Blo
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers })
   if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `Erro ${response.status} ao chamar a API`)
+    const message = await parseErrorMessage(response)
+    throw new Error(message)
   }
   return response.blob()
 }

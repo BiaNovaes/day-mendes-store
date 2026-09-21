@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { api, clearAuthToken, hasAuthToken, setAuthToken, type Categoria, type Cliente, type Dashboard, type Produto, type ProdutoEstoqueBaixo, type VariacaoProduto, type Venda } from './api'
+import { api, clearAuthToken, hasAuthToken, type Categoria, type Cliente, type Dashboard, type Loja, type Produto, type ProdutoEstoqueBaixo, type VariacaoProduto, type Venda } from './api'
 import Sidebar, { type View } from './components/Sidebar.vue'
 import Relatorio from './components/Relatorio.vue'
+import Login from './pages/Login.vue'
 
 const loading = ref(false)
 const error = ref('')
 const view = ref<View>('dashboard')
 const isAuthenticated = ref(hasAuthToken())
 const lojaNome = ref('Day Mendes Store')
-const loginForm = reactive({ email: '', senha: '' })
-const setupForm = reactive({ nome: 'Day Mendes Store', email: '', senha: '', cnpj: '' })
-const showSetup = ref(false)
 const dashboard = ref<Dashboard | null>(null)
 const estoqueBaixo = ref<ProdutoEstoqueBaixo[]>([])
 const categorias = ref<Categoria[]>([])
@@ -63,8 +61,11 @@ async function loadAll() {
   loading.value = true; error.value = ''
   try { const [perfil, dashboardData, estoqueData, categoriaData, produtoData, clienteData, vendaData] = await Promise.all([api.perfil(), api.dashboard(), api.estoqueBaixo(), api.categorias(), api.produtos(), api.clientes(), api.vendas()]); lojaNome.value = perfil.nome; dashboard.value = dashboardData; estoqueBaixo.value = estoqueData; categorias.value = categoriaData.items; produtos.value = produtoData.items; clientes.value = clienteData.items; vendas.value = vendaData.items } catch (err) { error.value = err instanceof Error ? err.message : 'Nao foi possivel carregar os dados.'; if (error.value.includes('401')) logout() } finally { loading.value = false }
 }
-async function login() { loading.value = true; error.value = ''; try { const response = await api.login(loginForm.email, loginForm.senha); setAuthToken(response.token); lojaNome.value = response.loja.nome; isAuthenticated.value = true; await loadAll() } catch (err) { error.value = err instanceof Error ? err.message : 'Login nao autorizado.' } finally { loading.value = false } }
-async function setupLoja() { loading.value = true; error.value = ''; try { await api.setupLoja(setupForm); showSetup.value = false; loginForm.email = setupForm.email; loginForm.senha = setupForm.senha; await login() } catch (err) { error.value = err instanceof Error ? err.message : 'Nao foi possivel configurar a loja.' } finally { loading.value = false } }
+async function handleLoginSuccess(loja: Loja) {
+  lojaNome.value = loja.nome
+  isAuthenticated.value = true
+  await loadAll()
+}
 function logout() { clearAuthToken(); isAuthenticated.value = false }
 async function runAndReload(action: () => Promise<void>) { loading.value = true; error.value = ''; try { await action(); await loadAll() } catch (err) { error.value = err instanceof Error ? err.message : 'Operacao nao concluida.' } finally { loading.value = false } }
 async function saveCategoria() { await runAndReload(async () => { await api.salvarCategoria(categoriaForm); categoriaForm.nome = ''; categoriaForm.descricao = '' }) }
@@ -81,7 +82,7 @@ onMounted(() => { if (isAuthenticated.value) loadAll() })
 </script>
 
 <template>
-  <main v-if="!isAuthenticated" class="auth-page"><section class="auth-panel"><img src="/logo-horizontal.png" alt="Day Mendes Store"><h1>Day Mendes Store</h1><p class="muted">Gestao de produtos, estoque, clientes e vendas.</p><form v-if="!showSetup" class="form-grid" @submit.prevent="login"><label>E-mail <input v-model="loginForm.email" type="email" required></label><label>Senha <input v-model="loginForm.senha" type="password" required></label><button :disabled="loading">Entrar</button><button class="ghost" type="button" @click="showSetup = true">Configurar loja</button></form><form v-else class="form-grid" @submit.prevent="setupLoja"><label>Nome <input v-model="setupForm.nome" required></label><label>E-mail <input v-model="setupForm.email" type="email" required></label><label>Senha <input v-model="setupForm.senha" type="password" required></label><label>CNPJ <input v-model="setupForm.cnpj"></label><button :disabled="loading">Salvar</button><button class="ghost" type="button" @click="showSetup = false">Voltar</button></form><p v-if="error" class="error">{{ error }}</p></section></main>
+  <Login v-if="!isAuthenticated" @success="handleLoginSuccess" />
   <main v-else class="app-shell">
     <Sidebar
       :current-view="view"
