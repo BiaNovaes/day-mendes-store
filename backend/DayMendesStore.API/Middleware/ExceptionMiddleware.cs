@@ -25,8 +25,27 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro não tratado capturado pelo middleware global: {Message}", ex.Message);
+            LogException(ex);
             await HandleExceptionAsync(httpContext, ex);
+        }
+    }
+
+    private void LogException(Exception ex)
+    {
+        switch (ex)
+        {
+            case UnauthorizedException:
+                _logger.LogWarning("Acesso não autorizado: {Message}", ex.Message);
+                break;
+            case BusinessException:
+                _logger.LogWarning("Regra de negócio: {Message}", ex.Message);
+                break;
+            case NotFoundException:
+                _logger.LogWarning("Recurso não encontrado: {Message}", ex.Message);
+                break;
+            default:
+                _logger.LogError(ex, "Erro não tratado capturado pelo middleware global: {Message}", ex.Message);
+                break;
         }
     }
 
