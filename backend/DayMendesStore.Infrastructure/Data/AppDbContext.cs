@@ -24,7 +24,6 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Global Query Filter for Soft Delete (Status != Status.Deletado)
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (typeof(BaseEntity).IsAssignableFrom(entityType.ClrType))
@@ -39,7 +38,6 @@ public class AppDbContext : DbContext
             }
         }
 
-        // Loja configuration
         modelBuilder.Entity<Loja>(entity =>
         {
             entity.ToTable("Lojas");
@@ -53,7 +51,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CorSecundaria).HasMaxLength(20);
         });
 
-        // Categoria configuration
         modelBuilder.Entity<Categoria>(entity =>
         {
             entity.ToTable("Categorias");
@@ -62,7 +59,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Descricao).HasMaxLength(300);
         });
 
-        // Produto configuration
         modelBuilder.Entity<Produto>(entity =>
         {
             entity.ToTable("Produtos");
@@ -86,7 +82,6 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // VariacaoProduto configuration
         modelBuilder.Entity<VariacaoProduto>(entity =>
         {
             entity.ToTable("VariacoesProduto", t =>
@@ -111,7 +106,6 @@ public class AppDbContext : DbContext
                 .IsUnique();
         });
 
-        // Cliente configuration
         modelBuilder.Entity<Cliente>(entity =>
         {
             entity.ToTable("Clientes");
@@ -123,7 +117,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Endereco).HasMaxLength(300);
         });
 
-        // Venda configuration
         modelBuilder.Entity<Venda>(entity =>
         {
             entity.ToTable("Vendas");
@@ -131,6 +124,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FormaPagamento).IsRequired().HasMaxLength(50);
             entity.Property(e => e.ValorTotal).HasPrecision(10, 2);
             entity.Property(e => e.StatusVenda).IsRequired();
+            entity.Property(e => e.MotivoCancelamento).HasMaxLength(500);
 
             entity.HasOne(e => e.Cliente)
                 .WithMany()
@@ -138,7 +132,6 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        // ItemVenda configuration
         modelBuilder.Entity<ItemVenda>(entity =>
         {
             entity.ToTable("ItensVenda");
@@ -162,7 +155,6 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // MovimentacaoEstoque configuration
         modelBuilder.Entity<MovimentacaoEstoque>(entity =>
         {
             entity.ToTable("MovimentacoesEstoque");

@@ -50,6 +50,7 @@ public class VendaDto
     public string FormaPagamento { get; set; } = string.Empty;
     public decimal ValorTotal { get; set; }
     public StatusVenda StatusVenda { get; set; }
+    public string? MotivoCancelamento { get; set; }
     public Status Status { get; set; }
     public int TotalItens => Itens.Sum(i => i.Quantidade);
     public List<ItemVendaDto> Itens { get; set; } = new();

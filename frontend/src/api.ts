@@ -82,11 +82,13 @@ export interface Venda {
   valorTotal: number
   statusVenda: StatusVenda
   status: Status
+  motivoCancelamento?: string
   totalItens: number
   itens: Array<{
     id: number
     produtoId: number
     produtoNome: string
+    produtoFoto?: string
     variacaoProdutoId: number
     tamanho?: string
     cor?: string
@@ -94,6 +96,18 @@ export interface Venda {
     valorUnitario: number
     subtotal: number
   }>
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface VendaFiltro {
+  page?: number
+  pageSize?: number
+  dataInicio?: string
+  dataFim?: string
+  clienteId?: number
+  formaPagamento?: string
+  statusVenda?: StatusVenda
 }
 export interface Dashboard {
   totalFaturado: number
@@ -316,7 +330,16 @@ export const api = {
     telefone?: string
     endereco?: string
   }) => request<Cliente>('/api/cliente', { method: 'POST', body: JSON.stringify(payload) }),
-  vendas: () => request<PagedResult<Venda>>('/api/venda?pageSize=20'),
+  vendas: (filtro?: VendaFiltro) =>
+    request<PagedResult<Venda>>(`/api/venda${query({ pageSize: 50, ...filtro })}`),
+  obterVenda: (id: number) => request<Venda>(`/api/venda/${id}`),
+  cancelarVenda: (id: number, motivo?: string) =>
+    request<Venda>(`/api/venda/${id}/cancelar`, {
+      method: 'POST',
+      body: JSON.stringify(motivo ? { motivo } : {}),
+    }),
+  finalizarVenda: (id: number) =>
+    request<Venda>(`/api/venda/${id}/finalizar`, { method: 'POST' }),
   criarVenda: (payload: unknown) =>
     request<Venda>('/api/venda', { method: 'POST', body: JSON.stringify(payload) }),
 }

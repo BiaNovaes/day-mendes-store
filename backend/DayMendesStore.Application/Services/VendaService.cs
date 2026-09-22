@@ -131,7 +131,6 @@ public class VendaService : IVendaService
 
         if (dto.FinalizarImediatamente)
         {
-            // Transaction MUST start before any stock reading/deduction to guarantee concurrency protection
             using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
             try
             {
@@ -146,7 +145,6 @@ public class VendaService : IVendaService
                     .Where(p => produtoIds.Contains(p.Id))
                     .ToDictionaryAsync(p => p.Id, cancellationToken);
 
-                // Calculate total quantity requested per variation to avoid overselling on duplicate item lines
                 var totalQuantityPerVariation = dto.Itens
                     .GroupBy(i => i.VariacaoProdutoId)
                     .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantidade));
@@ -485,7 +483,6 @@ public class VendaService : IVendaService
                     throw new BusinessException($"A variação '{variacao.Tamanho}/{variacao.Cor}' do produto '{produto.Nome}' está inativa e não pode ser vendida.");
                 }
 
-                // Freeze unit price and recalculate subtotal
                 item.ValorUnitario = produto.ValorVenda;
                 item.Subtotal = item.ValorUnitario * item.Quantidade;
                 novoTotal += item.Subtotal;
@@ -552,15 +549,18 @@ public class VendaService : IVendaService
                 throw new BusinessException("Esta venda já está cancelada.");
             }
 
+            var motivoTrimmed = string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim();
+
             if (venda.StatusVenda == StatusVenda.Rascunho)
             {
                 venda.StatusVenda = StatusVenda.Cancelada;
+                venda.MotivoCancelamento = motivoTrimmed;
+                _unitOfWork.Vendas.Update(venda);
                 await _unitOfWork.CommitAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 return await GetByIdAsync(id, cancellationToken);
             }
 
-            // If Finalizada, revert stock and create reversal movement under locked variation rows
             var variacaoIds = venda.Itens.Select(i => i.VariacaoProdutoId).Distinct().OrderBy(vId => vId).ToList();
             var variacoesList = await _unitOfWork.VariacoesProduto.GetByIdsForUpdateAsync(variacaoIds, cancellationToken);
             var variacoes = variacoesList.ToDictionary(v => v.Id);
@@ -578,7 +578,7 @@ public class VendaService : IVendaService
                         VariacaoProdutoId = variacao.Id,
                         Tipo = TipoMovimentacaoEstoque.EstornoVenda,
                         Quantidade = item.Quantidade,
-                        Motivo = null,
+                        Motivo = motivoTrimmed,
                         DataMovimentacao = DateTime.UtcNow,
                         Status = Status.Ativo,
                         CreatedAt = DateTime.UtcNow
@@ -588,6 +588,8 @@ public class VendaService : IVendaService
             }
 
             venda.StatusVenda = StatusVenda.Cancelada;
+            venda.MotivoCancelamento = motivoTrimmed;
+            _unitOfWork.Vendas.Update(venda);
 
             await _unitOfWork.CommitAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -629,6 +631,7 @@ public class VendaService : IVendaService
         FormaPagamento = v.FormaPagamento,
         ValorTotal = v.ValorTotal,
         StatusVenda = v.StatusVenda,
+        MotivoCancelamento = v.MotivoCancelamento,
         Status = v.Status,
         CreatedAt = v.CreatedAt,
         UpdatedAt = v.UpdatedAt,

@@ -10,6 +10,7 @@ public class Venda : BaseEntity
     public string FormaPagamento { get; set; } = string.Empty;
     public decimal ValorTotal { get; set; }
     public StatusVenda StatusVenda { get; set; } = StatusVenda.Rascunho;
+    public string? MotivoCancelamento { get; set; }
 
     public ICollection<ItemVenda> Itens { get; set; } = new List<ItemVenda>();
 }

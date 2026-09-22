@@ -613,9 +613,13 @@ DROP PROCEDURE MigrationsScript;
 COMMIT;
 
 
--- Codigo de barras por variacao, usado no PDV por bipagem e na impressao de etiquetas.
 ALTER TABLE `VariacoesProduto`
   ADD COLUMN IF NOT EXISTS `CodigoBarras` varchar(80) CHARACTER SET utf8mb4 NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS `IX_VariacoesProduto_CodigoBarras`
   ON `VariacoesProduto` (`CodigoBarras`);
+
+ALTER TABLE `Vendas`
+  ADD COLUMN IF NOT EXISTS `MotivoCancelamento` varchar(500) CHARACTER SET utf8mb4 NULL;
+
+
