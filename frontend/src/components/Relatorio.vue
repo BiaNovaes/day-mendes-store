@@ -319,7 +319,8 @@ onMounted(() => {
         :class="{ active: activeTab === 'geral' }"
         @click="activeTab = 'geral'"
       >
-        Visão geral das vendas
+        <span class="tab-label-desktop">Visão geral das vendas</span>
+        <span class="tab-label-mobile">Visão geral</span>
       </button>
 
       <button
@@ -328,7 +329,8 @@ onMounted(() => {
         :class="{ active: activeTab === 'pecas' }"
         @click="activeTab = 'pecas'"
       >
-        Desempenho das peças
+        <span class="tab-label-desktop">Desempenho das peças</span>
+        <span class="tab-label-mobile">Peças</span>
       </button>
 
       <button
@@ -337,7 +339,8 @@ onMounted(() => {
         :class="{ active: activeTab === 'compras' }"
         @click="activeTab = 'compras'"
       >
-        Sugestões de compra (Brás)
+        <span class="tab-label-desktop">Sugestões de compra (Brás)</span>
+        <span class="tab-label-mobile">Compras</span>
         <span v-if="relatorio?.sugestoesReposicao.length" class="badge-tab-counter">
           {{ relatorio.sugestoesReposicao.length }}
         </span>
@@ -349,7 +352,8 @@ onMounted(() => {
         :class="{ active: activeTab === 'tamanhos' }"
         @click="activeTab = 'tamanhos'"
       >
-        Tamanhos e clientes
+        <span class="tab-label-desktop">Tamanhos e clientes</span>
+        <span class="tab-label-mobile">Tamanhos</span>
       </button>
     </nav>
 
@@ -434,58 +438,115 @@ onMounted(() => {
       <div class="two-columns-grid">
         <div class="content-box">
           <h3 class="box-title">👗 Peças mais vendidas</h3>
-          <div v-if="relatorio?.produtosMaisVendidos.length" class="table-container">
-            <table class="styled-table">
-              <thead>
-                <tr>
-                  <th>Peça</th>
-                  <th>Tam/Cor</th>
-                  <th class="text-right">Qtd</th>
-                  <th class="text-right">Total</th>
-                  <th class="text-right">Lucro</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in relatorio.produtosMaisVendidos" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
-                  <td><strong>{{ p.nome }}</strong></td>
-                  <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
-                  <td class="text-right font-bold">{{ p.quantidadeVendida }}</td>
-                  <td class="text-right">{{ money(p.valorTotalVendido) }}</td>
-                  <td class="text-right text-success font-bold">{{ money(p.lucroEstimado) }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="relatorio?.produtosMaisVendidos.length">
+            <div class="table-container desktop-table-view">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Peça</th>
+                    <th>Tam/Cor</th>
+                    <th class="text-right">Qtd</th>
+                    <th class="text-right">Total</th>
+                    <th class="text-right">Lucro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="p in relatorio.produtosMaisVendidos" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
+                    <td><strong>{{ p.nome }}</strong></td>
+                    <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
+                    <td class="text-right font-bold">{{ p.quantidadeVendida }}</td>
+                    <td class="text-right">{{ money(p.valorTotalVendido) }}</td>
+                    <td class="text-right text-success font-bold">{{ money(p.lucroEstimado) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mobile-cards-list">
+              <article
+                v-for="p in relatorio.produtosMaisVendidos"
+                :key="`${p.produtoId}-${p.tamanho}-${p.cor}`"
+                class="mobile-product-card"
+              >
+                <div class="mobile-card-top">
+                  <strong class="mobile-card-title">{{ p.nome }}</strong>
+                  <span class="mobile-card-tag">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</span>
+                </div>
+                <div class="mobile-card-metrics">
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Vendas</span>
+                    <strong class="m-value">{{ p.quantidadeVendida }} un</strong>
+                  </div>
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Faturamento</span>
+                    <strong class="m-value">{{ money(p.valorTotalVendido) }}</strong>
+                  </div>
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Lucro est.</span>
+                    <strong class="m-value text-success">{{ money(p.lucroEstimado) }}</strong>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
           <p v-else class="empty-notice">Nenhuma peça vendida no período.</p>
         </div>
 
         <div class="content-box">
           <h3 class="box-title">Peças com pouco estoque</h3>
-          <div v-if="relatorio?.produtosEstoqueBaixo.length" class="table-container">
-            <table class="styled-table">
-              <thead>
-                <tr>
-                  <th>Peça</th>
-                  <th>Tam/Cor</th>
-                  <th class="text-right">Atual</th>
-                  <th class="text-right">Mínimo</th>
-                  <th>Situação</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="p in relatorio.produtosEstoqueBaixo" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
-                  <td><strong>{{ p.nome }}</strong></td>
-                  <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
-                  <td class="text-right font-bold">{{ p.estoqueAtual }}</td>
-                  <td class="text-right text-muted">{{ p.estoqueMinimo }}</td>
-                  <td>
-                    <span class="pill-badge" :class="p.estoqueAtual === 0 ? 'danger' : 'warning'">
-                      {{ p.statusEstoque }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="relatorio?.produtosEstoqueBaixo.length">
+            <div class="table-container desktop-table-view">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Peça</th>
+                    <th>Tam/Cor</th>
+                    <th class="text-right">Atual</th>
+                    <th class="text-right">Mínimo</th>
+                    <th>Situação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="p in relatorio.produtosEstoqueBaixo" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
+                    <td><strong>{{ p.nome }}</strong></td>
+                    <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
+                    <td class="text-right font-bold">{{ p.estoqueAtual }}</td>
+                    <td class="text-right text-muted">{{ p.estoqueMinimo }}</td>
+                    <td>
+                      <span class="pill-badge" :class="p.estoqueAtual === 0 ? 'danger' : 'warning'">
+                        {{ p.statusEstoque }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mobile-cards-list">
+              <article
+                v-for="p in relatorio.produtosEstoqueBaixo"
+                :key="`${p.produtoId}-${p.tamanho}-${p.cor}`"
+                class="mobile-product-card"
+              >
+                <div class="mobile-card-top">
+                  <strong class="mobile-card-title">{{ p.nome }}</strong>
+                  <span class="pill-badge" :class="p.estoqueAtual === 0 ? 'danger' : 'warning'">
+                    {{ p.statusEstoque }}
+                  </span>
+                </div>
+                <span class="mobile-card-subtitle">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</span>
+                <div class="mobile-card-metrics">
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Estoque atual</span>
+                    <strong class="m-value" :class="p.estoqueAtual === 0 ? 'text-danger' : ''">{{ p.estoqueAtual }} un</strong>
+                  </div>
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Estoque mínimo</span>
+                    <span class="m-value">{{ p.estoqueMinimo }} un</span>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
           <p v-else class="empty-notice">Todas as peças estão com níveis adequados de estoque.</p>
         </div>
@@ -493,33 +554,63 @@ onMounted(() => {
 
       <div class="content-box mt-16">
         <h3 class="box-title">💤 Peças paradas (> 30 dias sem venda)</h3>
-        <div v-if="relatorio?.produtosParados.length" class="table-container">
-          <table class="styled-table">
-            <thead>
-              <tr>
-                <th>Peça</th>
-                <th>Categoria</th>
-                <th>Tam/Cor</th>
-                <th class="text-right">Estoque</th>
-                <th class="text-right">Preço</th>
-                <th class="text-right">Tempo sem venda</th>
-                <th>Classificação</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in relatorio.produtosParados" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
-                <td><strong>{{ p.nome }}</strong></td>
-                <td>{{ p.categoriaNome }}</td>
-                <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
-                <td class="text-right font-bold">{{ p.estoqueAtual }}</td>
-                <td class="text-right">{{ money(p.valorVenda) }}</td>
-                <td class="text-right">{{ p.diasSemVenda }} dias</td>
-                <td>
-                  <span class="pill-badge neutral">{{ p.classificacaoRotatividade }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-if="relatorio?.produtosParados.length">
+          <div class="table-container desktop-table-view">
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Peça</th>
+                  <th>Categoria</th>
+                  <th>Tam/Cor</th>
+                  <th class="text-right">Estoque</th>
+                  <th class="text-right">Preço</th>
+                  <th class="text-right">Tempo sem venda</th>
+                  <th>Classificação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in relatorio.produtosParados" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
+                  <td><strong>{{ p.nome }}</strong></td>
+                  <td>{{ p.categoriaNome }}</td>
+                  <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
+                  <td class="text-right font-bold">{{ p.estoqueAtual }}</td>
+                  <td class="text-right">{{ money(p.valorVenda) }}</td>
+                  <td class="text-right">{{ p.diasSemVenda }} dias</td>
+                  <td>
+                    <span class="pill-badge neutral">{{ p.classificacaoRotatividade }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mobile-cards-list">
+            <article
+              v-for="p in relatorio.produtosParados"
+              :key="`${p.produtoId}-${p.tamanho}-${p.cor}`"
+              class="mobile-product-card"
+            >
+              <div class="mobile-card-top">
+                <strong class="mobile-card-title">{{ p.nome }}</strong>
+                <span class="pill-badge neutral">{{ p.classificacaoRotatividade }}</span>
+              </div>
+              <span class="mobile-card-subtitle">{{ p.categoriaNome }} • {{ p.tamanho || '-' }} / {{ p.cor || '-' }}</span>
+              <div class="mobile-card-metrics">
+                <div class="mobile-metric-item">
+                  <span class="m-label">Estoque</span>
+                  <strong class="m-value">{{ p.estoqueAtual }} un</strong>
+                </div>
+                <div class="mobile-metric-item">
+                  <span class="m-label">Preço</span>
+                  <strong class="m-value">{{ money(p.valorVenda) }}</strong>
+                </div>
+                <div class="mobile-metric-item">
+                  <span class="m-label">Parado há</span>
+                  <strong class="m-value color-primary">{{ p.diasSemVenda }} dias</strong>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
         <p v-else class="empty-notice">Nenhum produto parado identificado.</p>
       </div>
@@ -534,35 +625,74 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="relatorio?.sugestoesReposicao.length" class="table-container">
-          <table class="styled-table">
-            <thead>
-              <tr>
-                <th style="width: 38px;"></th>
-                <th>Peça</th>
-                <th>Categoria</th>
-                <th>Tamanho / Cor</th>
-                <th class="text-right">Estoque atual</th>
-                <th class="text-right">Vendas (30d)</th>
-                <th class="text-right color-primary">Comprar (Qtd)</th>
-                <th>Justificativa</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in relatorio.sugestoesReposicao" :key="`${item.produtoId}-${item.tamanho}-${item.cor}`">
-                <td class="text-center">
-                  <span class="check-box-ui"></span>
-                </td>
-                <td><strong>{{ item.nome }}</strong></td>
-                <td>{{ item.categoriaNome }}</td>
-                <td class="text-muted">{{ item.tamanho || '-' }} / {{ item.cor || '-' }}</td>
-                <td class="text-right">{{ item.estoqueAtual }} un</td>
-                <td class="text-right">{{ item.vendasUltimos30Dias }} un</td>
-                <td class="text-right font-bold color-primary">{{ item.quantidadeSugerida }} un</td>
-                <td class="text-muted">{{ item.justificativaSugestao }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-if="relatorio?.sugestoesReposicao.length">
+          <div class="table-container desktop-table-view">
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th style="width: 38px;"></th>
+                  <th>Peça</th>
+                  <th>Categoria</th>
+                  <th>Tamanho / Cor</th>
+                  <th class="text-right">Estoque atual</th>
+                  <th class="text-right">Vendas (30d)</th>
+                  <th class="text-right color-primary">Comprar (Qtd)</th>
+                  <th>Justificativa</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in relatorio.sugestoesReposicao" :key="`${item.produtoId}-${item.tamanho}-${item.cor}`">
+                  <td class="text-center">
+                    <span class="check-box-ui"></span>
+                  </td>
+                  <td><strong>{{ item.nome }}</strong></td>
+                  <td>{{ item.categoriaNome }}</td>
+                  <td class="text-muted">{{ item.tamanho || '-' }} / {{ item.cor || '-' }}</td>
+                  <td class="text-right">{{ item.estoqueAtual }} un</td>
+                  <td class="text-right">{{ item.vendasUltimos30Dias }} un</td>
+                  <td class="text-right font-bold color-primary">{{ item.quantidadeSugerida }} un</td>
+                  <td class="text-muted">{{ item.justificativaSugestao }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mobile-cards-list">
+            <article
+              v-for="item in relatorio.sugestoesReposicao"
+              :key="`${item.produtoId}-${item.tamanho}-${item.cor}`"
+              class="mobile-product-card purchase-suggestion-card"
+            >
+              <div class="mobile-card-top">
+                <div>
+                  <strong class="mobile-card-title">{{ item.nome }}</strong>
+                  <div class="mobile-card-subtitle">{{ item.categoriaNome }} • {{ item.tamanho || '-' }} / {{ item.cor || '-' }}</div>
+                </div>
+                <div class="suggestion-highlight-badge">
+                  <span class="sugg-label">Comprar</span>
+                  <strong class="sugg-qty">{{ item.quantidadeSugerida }} un</strong>
+                </div>
+              </div>
+              <div class="mobile-card-metrics">
+                <div class="mobile-metric-item">
+                  <span class="m-label">Estoque atual</span>
+                  <span class="m-value">{{ item.estoqueAtual }} un</span>
+                </div>
+                <div class="mobile-metric-item">
+                  <span class="m-label">Vendas (30d)</span>
+                  <span class="m-value">{{ item.vendasUltimos30Dias }} un</span>
+                </div>
+              </div>
+              <p v-if="item.justificativaSugestao" class="mobile-card-note">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+                <span>{{ item.justificativaSugestao }}</span>
+              </p>
+            </article>
+          </div>
         </div>
         <p v-else class="empty-notice">Nenhuma sugestão de reposição necessária no momento.</p>
       </div>
@@ -572,59 +702,120 @@ onMounted(() => {
       <div class="two-columns-grid">
         <div class="content-box">
           <h3 class="box-title">Análise por tamanho</h3>
-          <div v-if="relatorio?.analiseTamanhos.length" class="table-container">
-            <table class="styled-table">
-              <thead>
-                <tr>
-                  <th>Tamanho</th>
-                  <th class="text-right">Peças vendidas</th>
-                  <th class="text-right">Total faturado</th>
-                  <th class="text-right">Disponíveis</th>
-                  <th>Velocidade</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="t in relatorio.analiseTamanhos" :key="t.tamanho">
-                  <td><strong>{{ t.tamanho }}</strong></td>
-                  <td class="text-right font-bold">{{ t.quantidadeVendida }}</td>
-                  <td class="text-right">{{ money(t.valorTotal) }}</td>
-                  <td class="text-right text-muted">{{ t.quantidadeEmEstoque }}</td>
-                  <td>
-                    <span class="pill-badge" :class="t.velocidadeSaida === 'Alta' ? 'success' : 'neutral'">
-                      {{ t.velocidadeSaida }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-if="relatorio?.analiseTamanhos.length">
+            <div class="table-container desktop-table-view">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Tamanho</th>
+                    <th class="text-right">Peças vendidas</th>
+                    <th class="text-right">Total faturado</th>
+                    <th class="text-right">Disponíveis</th>
+                    <th>Velocidade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="t in relatorio.analiseTamanhos" :key="t.tamanho">
+                    <td><strong>{{ t.tamanho }}</strong></td>
+                    <td class="text-right font-bold">{{ t.quantidadeVendida }}</td>
+                    <td class="text-right">{{ money(t.valorTotal) }}</td>
+                    <td class="text-right text-muted">{{ t.quantidadeEmEstoque }}</td>
+                    <td>
+                      <span class="pill-badge" :class="t.velocidadeSaida === 'Alta' ? 'success' : 'neutral'">
+                        {{ t.velocidadeSaida }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mobile-cards-list">
+              <article
+                v-for="t in relatorio.analiseTamanhos"
+                :key="t.tamanho"
+                class="mobile-product-card"
+              >
+                <div class="mobile-card-top">
+                  <div class="size-badge-box">
+                    <span class="size-letter">{{ t.tamanho }}</span>
+                  </div>
+                  <span class="pill-badge" :class="t.velocidadeSaida === 'Alta' ? 'success' : 'neutral'">
+                    {{ t.velocidadeSaida }}
+                  </span>
+                </div>
+                <div class="mobile-card-metrics">
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Vendidas</span>
+                    <strong class="m-value">{{ t.quantidadeVendida }} un</strong>
+                  </div>
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Faturado</span>
+                    <strong class="m-value">{{ money(t.valorTotal) }}</strong>
+                  </div>
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Disponíveis</span>
+                    <span class="m-value">{{ t.quantidadeEmEstoque }} un</span>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
           <p v-else class="empty-notice">Sem dados de tamanhos para o período selecionado.</p>
         </div>
 
         <div class="content-box">
           <h3 class="box-title">Melhores clientes</h3>
-          <div v-if="relatorio?.melhoresClientes.length" class="table-container">
-            <table class="styled-table">
-              <thead>
-                <tr>
-                  <th>Cliente</th>
-                  <th class="text-right">Compras</th>
-                  <th class="text-right">Total comprado</th>
-                  <th>Última compra</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="c in relatorio.melhoresClientes" :key="c.clienteId || c.nome">
-                  <td>
-                    <strong>{{ c.nome }}</strong>
+          <div v-if="relatorio?.melhoresClientes.length">
+            <div class="table-container desktop-table-view">
+              <table class="styled-table">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th class="text-right">Compras</th>
+                    <th class="text-right">Total comprado</th>
+                    <th>Última compra</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="c in relatorio.melhoresClientes" :key="c.clienteId || c.nome">
+                    <td>
+                      <strong>{{ c.nome }}</strong>
+                      <div v-if="c.telefone" class="small-text">{{ c.telefone }}</div>
+                    </td>
+                    <td class="text-right font-bold">{{ c.totalCompras }}</td>
+                    <td class="text-right text-success font-bold">{{ money(c.valorTotalComprado) }}</td>
+                    <td class="text-muted">{{ formatDate(c.ultimaCompra) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mobile-cards-list">
+              <article
+                v-for="c in relatorio.melhoresClientes"
+                :key="c.clienteId || c.nome"
+                class="mobile-product-card"
+              >
+                <div class="mobile-card-top">
+                  <div>
+                    <strong class="mobile-card-title">{{ c.nome }}</strong>
                     <div v-if="c.telefone" class="small-text">{{ c.telefone }}</div>
-                  </td>
-                  <td class="text-right font-bold">{{ c.totalCompras }}</td>
-                  <td class="text-right text-success font-bold">{{ money(c.valorTotalComprado) }}</td>
-                  <td class="text-muted">{{ formatDate(c.ultimaCompra) }}</td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                  <span class="client-orders-badge">{{ c.totalCompras }} compras</span>
+                </div>
+                <div class="mobile-card-metrics">
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Total gasto</span>
+                    <strong class="m-value text-success">{{ money(c.valorTotalComprado) }}</strong>
+                  </div>
+                  <div class="mobile-metric-item">
+                    <span class="m-label">Última compra</span>
+                    <span class="m-value">{{ formatDate(c.ultimaCompra) }}</span>
+                  </div>
+                </div>
+              </article>
+            </div>
           </div>
           <p v-else class="empty-notice">Sem dados de clientes para o período selecionado.</p>
         </div>
@@ -1287,6 +1478,162 @@ onMounted(() => {
   margin-top: 20px;
 }
 
+.desktop-table-view {
+  display: block;
+}
+
+.mobile-cards-list {
+  display: none;
+}
+
+.tab-label-desktop {
+  display: inline;
+}
+
+.tab-label-mobile {
+  display: none;
+}
+
+.mobile-product-card {
+  background: #faf8f6;
+  border: 1px solid #eee7e3;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.mobile-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mobile-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #25201f;
+  line-height: 1.25;
+}
+
+.mobile-card-subtitle {
+  font-size: 0.76rem;
+  color: #736965;
+}
+
+.mobile-card-tag {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #6b5f5a;
+  background: #f0e9e4;
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.mobile-card-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px solid #eee7e3;
+  flex-wrap: wrap;
+}
+
+.mobile-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobile-metric-item .m-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  color: #8b807b;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.mobile-metric-item .m-value {
+  font-size: 0.86rem;
+  color: #25201f;
+}
+
+.suggestion-highlight-badge {
+  background: #fbeff1;
+  border: 1px solid rgba(218, 92, 129, 0.25);
+  border-radius: 8px;
+  padding: 4px 10px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.sugg-label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  color: #da5c81;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.sugg-qty {
+  font-size: 0.95rem;
+  color: #b33f62;
+  font-weight: 800;
+}
+
+.mobile-card-note {
+  margin: 0;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-radius: 6px;
+  border: 1px dashed #d8cfca;
+  font-size: 0.74rem;
+  color: #6b5f5a;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.mobile-card-note svg {
+  color: #b33f62;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.size-badge-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1.5px solid #b33f62;
+  color: #b33f62;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.86rem;
+}
+
+.client-orders-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #f0e9e4;
+  color: #594e4a;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.text-danger {
+  color: #dc2626;
+}
+
 @media (max-width: 980px) {
   .two-columns-grid {
     grid-template-columns: 1fr;
@@ -1303,6 +1650,211 @@ onMounted(() => {
   }
   .form-grid-modal {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-table-view {
+    display: none !important;
+  }
+
+  .mobile-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .tab-label-desktop {
+    display: none;
+  }
+
+  .tab-label-mobile {
+    display: inline;
+  }
+
+  .header-tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.6px;
+  }
+
+  .header-title {
+    font-size: 1.3rem;
+    letter-spacing: -0.3px;
+  }
+
+  .report-summary-card {
+    padding: 14px 16px;
+    gap: 14px;
+    border-radius: 10px;
+  }
+
+  .summary-badge-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .summary-name {
+    font-size: 0.95rem;
+  }
+
+  .summary-details {
+    font-size: 0.76rem;
+    gap: 6px;
+  }
+
+  .summary-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-filter-modal,
+  .btn-export-pdf {
+    flex: 1;
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 0.8rem;
+    justify-content: center;
+  }
+
+  .report-nav-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px 0 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    border-bottom: 1px solid #eee7e3;
+  }
+
+  .report-nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab-btn {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border-radius: 20px;
+    border: 1px solid #e5ddd8;
+    background: #ffffff;
+    font-size: 0.78rem;
+    color: #6b5f5a;
+    min-height: 36px;
+  }
+
+  .nav-tab-btn.active {
+    background: #b33f62;
+    color: #ffffff;
+    border-color: #b33f62;
+    box-shadow: 0 2px 8px rgba(179, 63, 98, 0.25);
+  }
+
+  .nav-tab-btn.active .badge-tab-counter {
+    background: #ffffff;
+    color: #b33f62;
+  }
+
+  .metrics-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 12px 14px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+
+  .stat-caption {
+    font-size: 0.66rem;
+  }
+
+  .stat-number {
+    font-size: 1.15rem;
+  }
+
+  .stat-subtext {
+    font-size: 0.68rem;
+  }
+
+  .content-box {
+    padding: 16px 14px;
+    border-radius: 10px;
+  }
+
+  .box-title {
+    font-size: 0.95rem;
+  }
+
+  .box-desc {
+    font-size: 0.76rem;
+  }
+
+  .data-row {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .row-left strong {
+    font-size: 0.84rem;
+  }
+
+  .row-right strong {
+    font-size: 0.88rem;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .modal-box {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px 16px 10px 10px;
+  }
+
+  .modal-body-content {
+    overflow-y: auto;
+    padding: 16px 14px;
+  }
+
+  .modal-head {
+    padding: 16px 16px 12px;
+  }
+
+  .modal-heading {
+    font-size: 1.02rem;
+  }
+
+  .modal-footer-actions {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .btn-modal-clear,
+  .btn-modal-apply {
+    flex: 1;
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-container {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .summary-actions {
+    flex-direction: column;
+  }
+
+  .btn-filter-modal,
+  .btn-export-pdf {
+    width: 100%;
   }
 }
 </style>

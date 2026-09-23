@@ -297,23 +297,9 @@ const menuItems: MenuItem[] = [
   border-color: rgba(239, 68, 68, 0.3);
 }
 
-@media (max-width: 980px) {
+@media (max-width: 768px) {
   .app-sidebar {
-    width: 100%;
-    min-width: 100%;
-    height: auto;
-    position: relative;
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .sidebar-nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .nav-item {
-    flex: 1 1 120px;
-    justify-content: center;
+    display: none !important;
   }
 }
 </style>
