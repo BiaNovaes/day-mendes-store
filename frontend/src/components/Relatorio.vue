@@ -413,7 +413,7 @@ onMounted(() => {
         </div>
 
         <div class="content-box">
-          <h3 class="box-title">🏷️ Categorias com maior faturamento</h3>
+          <h3 class="box-title">Categorias com maior faturamento</h3>
           <div v-if="relatorio?.categoriasMaisVendidas.length" class="rows-list">
             <div
               v-for="cat in relatorio.categoriasMaisVendidas"
@@ -437,7 +437,7 @@ onMounted(() => {
     <div v-else-if="activeTab === 'pecas'" class="tab-pane">
       <div class="two-columns-grid">
         <div class="content-box">
-          <h3 class="box-title">👗 Peças mais vendidas</h3>
+          <h3 class="box-title">Peças mais vendidas</h3>
           <div v-if="relatorio?.produtosMaisVendidos.length">
             <div class="table-container desktop-table-view">
               <table class="styled-table">
@@ -620,7 +620,7 @@ onMounted(() => {
       <div class="content-box">
         <div class="box-header-wrap">
           <div>
-            <h3 class="box-title">🛍️ Sugestões de compra para fornecedores</h3>
+            <h3 class="box-title">Sugestões de compra para fornecedores</h3>
             <p class="box-desc">Recomendações automáticas baseadas nas peças mais procuradas e que estão no fim do estoque.</p>
           </div>
         </div>
