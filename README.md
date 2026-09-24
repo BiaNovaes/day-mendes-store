@@ -2,141 +2,214 @@
 
   <img src="./logo/logo-horizontal.png" alt="Day Mendes Store" width="440" />
 
-  <p><strong>Sistema de gestão comercial, controle de estoque por variações e emissão de relatórios executivos para moda feminina.</strong></p>
+  <p><strong>Sistema de gestão comercial, controle de estoque por variações físicas e emissão de relatórios executivos para moda feminina.</strong></p>
 
   <p>
-    <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET_10-DA5C81?style=flat-square&logo=dotnet&logoColor=white" alt=".NET 10" /></a>
-    <a href="https://learn.microsoft.com/dotnet/csharp/"><img src="https://img.shields.io/badge/C%23_14-DA5C81?style=flat-square&logo=csharp&logoColor=white" alt="C#" /></a>
-    <a href="https://learn.microsoft.com/aspnet/core/"><img src="https://img.shields.io/badge/ASP.NET_Core-DA5C81?style=flat-square&logo=dotnet&logoColor=white" alt="ASP.NET Core" /></a>
-    <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/Vue.js_3-DA5C81?style=flat-square&logo=vuedotjs&logoColor=white" alt="Vue 3" /></a>
-    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-DA5C81?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
-    <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL_8.0-DA5C81?style=flat-square&logo=mysql&logoColor=white" alt="MySQL" /></a>
-    <a href="https://learn.microsoft.com/ef/core/"><img src="https://img.shields.io/badge/EF_Core_9-DA5C81?style=flat-square&logo=dotnet&logoColor=white" alt="EF Core" /></a>
-    <a href="https://www.questpdf.com/"><img src="https://img.shields.io/badge/QuestPDF-DA5C81?style=flat-square" alt="QuestPDF" /></a>
+    <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET_10-9D3556?style=flat-square&logo=dotnet&logoColor=white" alt=".NET 10" /></a>
+    <a href="https://learn.microsoft.com/dotnet/csharp/"><img src="https://img.shields.io/badge/C%23_14-9D3556?style=flat-square&logo=csharp&logoColor=white" alt="C#" /></a>
+    <a href="https://learn.microsoft.com/aspnet/core/"><img src="https://img.shields.io/badge/ASP.NET_Core-9D3556?style=flat-square&logo=dotnet&logoColor=white" alt="ASP.NET Core" /></a>
+    <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/Vue.js_3-9D3556?style=flat-square&logo=vuedotjs&logoColor=white" alt="Vue 3" /></a>
+    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-9D3556?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+    <a href="https://www.mysql.com/"><img src="https://img.shields.io/badge/MySQL_8.0-9D3556?style=flat-square&logo=mysql&logoColor=white" alt="MySQL" /></a>
+    <a href="https://learn.microsoft.com/ef/core/"><img src="https://img.shields.io/badge/EF_Core_9-9D3556?style=flat-square&logo=dotnet&logoColor=white" alt="EF Core" /></a>
+    <a href="https://www.questpdf.com/"><img src="https://img.shields.io/badge/QuestPDF-9D3556?style=flat-square" alt="QuestPDF" /></a>
   </p>
 
 </div>
 
 ---
 
-## 🛍️ Sobre o projeto
+## Sobre o Projeto
 
-O **Day Mendes Store** é um sistema de gestão desenvolvido sob medida para o varejo de moda feminina. O projeto centraliza o controle de catálogo, o registro de clientes, a frente de caixa (vendas) e a geração de relatórios estratégicos para tomada de decisão.
+O **Day Mendes Store** é uma plataforma de gestão desenvolvida especificamente para as necessidades operacionais e estratégicas do varejo de moda feminina. O sistema unifica o controle de catálogo, inventário com múltiplos atributos, cadastro de clientes, frente de caixa (PDV) e relatórios de desempenho comercial.
 
-O diferencial do sistema está em seu modelo de estoque por variações físicas (**tamanho** e **cor**), garantindo integridade transacional em todas as operações de venda, cancelamento com estorno e reposição de mercadorias.
-
----
-
-## ✨ Funcionalidades
-
-- **🛍️ Gestão de Produtos & Categorias**: Cadastro, edição, inativação lógica (*soft delete*) e consulta com paginação e filtros.
-- **🎨 Variações por Tamanho e Cor**: Controle de múltiplos tamanhos e cores por produto, com saldo de estoque individualizado por variação.
-- **📦 Controle & Movimentação de Estoque**: Entradas manuais, ajustes de inventário e histórico completo de movimentações.
-- **👥 Gestão de Clientes**: Cadastro, edição, inativação e vínculo com o histórico de vendas.
-- **💰 Frente de Caixa & Vendas (PDV)**: Criação de pedidos em rascunho, edição de itens e finalização com validação e baixa atômica de estoque.
-- **↩️ Cancelamento & Estorno**: Cancelamento de pedidos com devolução automática do estoque para a variação correspondente.
-- **📊 Relatórios Gerenciais**: Dashboard com indicadores gerais, ranking de produtos mais e menos vendidos, giro por tamanho, alertas de estoque baixo e sugestão inteligente de reposição.
-- **📄 Relatório Executivo em PDF**: Emissão de relatórios executivos formatados e diagramados via **QuestPDF**, personalizados com a identidade visual da loja.
-- **🔐 Autenticação & Segurança**: Controle de acesso com tokens **JWT**, senhas criptografadas com **BCrypt** e rotinas para configuração inicial da loja.
+A arquitetura foi projetada para resolver a complexidade inerente ao setor de vestuário: o controle de estoque fracionado por variações físicas de **tamanho** e **cor**, com garantia de consistência transacional em vendas, devoluções e reposições.
 
 ---
 
-## 👗 Modelagem de Produto
+## Objetivo
 
-No varejo de moda, o item comercializado é definido pela combinação do modelo com tamanho e cor. O sistema reflete essa regra de negócio de forma simples e direta:
+Fornecer uma solução centralizada, confiável e intuitiva para a gestão diária da loja, eliminando divergências de inventário, acelerando o fechamento de pedidos no caixa e gerando inteligência comercial para compras de reposição no atacado.
 
-* **Produto**: Representa o modelo no catálogo (nome, marca, categoria, preço de compra, preço de venda e estoque mínimo).
-* **Variação do Produto (`VariacaoProduto`)**: Representa a unidade física com tamanho e cor específicos, onde reside o saldo de estoque real.
+---
+
+## Principais Funcionalidades
+
+### Gestão de Produtos e Categorias
+* Cadastro detalhado de produtos com nome, marca, categoria, preço de custo, preço de venda e limite de estoque mínimo.
+* Visualização flexível do catálogo em formato de cards minimalistas ou tabela densa.
+* Busca textual dinâmica em tempo real por nome, código ou marca.
+* Exclusão segura com suporte a exclusão lógica (*soft delete*) e inativação quando houver histórico de vendas vinculado.
+
+### Variações Físicas e Controle de Estoque
+* Estoque atomizado por combinação de tamanho (P, M, G, GG, Único) e cor.
+* Saldo total do produto calculado dinamicamente com base nas variações ativas.
+* Modal de visualização e edição direta de quantidades por variação sem necessidade de abrir formulários complexos.
+* Alertas automáticos para produtos com estoque zerado ou abaixo do limite de segurança.
+
+### Geração de Etiquetas Térmicas e Código de Barras
+* Geração vetorial (SVG) de códigos de barras no padrão Code 39, eliminando dependência de serviços externos.
+* Layout otimizado para impressão em bobinas térmicas e etiquetas adesivas para confecção.
+* Impressão individual por produto ou em lote por seleção múltipla no catálogo.
+* Identificação visual com nome da loja, produto, marca, tamanho, cor, código e valor de venda.
+
+### Frente de Caixa (PDV)
+* Lançamento ágil de vendas com seleção de produto e variação física.
+* Associação com cliente cadastrado ou venda anônima para consumidor final.
+* Aplicação de descontos ou acréscimos monetários no fechamento.
+* Múltiplos métodos de pagamento (Dinheiro, PIX, Cartão de Crédito, Cartão de Débito).
+* Cálculo automático de troco e impressão de comprovante não fiscal.
+* Salvamento de pedidos em rascunho para retomada posterior.
+
+### Histórico de Vendas e Cancelamento com Estorno
+* Painel de consulta de vendas com filtros por status (Finalizada, Rascunho, Cancelada).
+* Detalhamento de itens, valores, formas de pagamento e dados do cliente.
+* Cancelamento de venda com estorno atômico de estoque, retornando as peças automaticamente para a variação física de origem.
+
+### Gestão de Clientes e Histórico
+* Cadastro e edição com nome, apelido, telefone, e-mail e endereço.
+* Modal de histórico consolidado por cliente com métricas de total comprado, quantidade de compras, ticket médio e lista detalhada de pedidos anteriores.
+
+### Relatórios Estratégicos e Exportação em PDF
+* Filtros combinados por período (data inicial e final), categoria e grade de tamanho.
+* Indicadores gerais de desempenho: total faturado, lucro bruto estimado, quantidade de peças vendidas e ticket médio.
+* Distribuição de faturamento por método de pagamento e categorias mais rentáveis.
+* Desempenho de produtos: peças mais vendidas, produtos com estoque crítico e peças paradas sem giro há mais de 30 dias.
+* Sugestões de compra para fornecedores (Brás), com cálculo automático de quantidade sugerida e justificativa baseada no histórico de vendas.
+* Análise de velocidade de saída por tamanho e ranking de melhores clientes.
+* Exportação de relatório executivo diagramado em PDF via **QuestPDF**, formatado com a identidade visual da loja.
+
+### Upload e Armazenamento de Imagens
+* Endpoint dedicado multipart/form-data para upload de fotos de produtos.
+* Armazenamento estático estruturado no servidor com geração de identificadores únicos (GUID).
+* Suporte a imagens locais e URLs externas com fallback visual para produtos sem foto.
+
+### Autenticação e Segurança
+* Autenticação stateless via JSON Web Token (JWT) com Bearer Scheme.
+* Criptografia unidirecional de senhas com algoritmo BCrypt.
+* Rota de configuração e primeiro acesso da loja.
+
+---
+
+## Módulos do Sistema
+
+O sistema é dividido nos seguintes módulos principais na interface:
+
+1. **Painel**: Resumo dos principais indicadores diários da loja.
+2. **Produtos**: Catálogo completo, gestão de categorias, estoque por variação, etiquetas e controle de produtos.
+3. **Clientes**: Base de contatos, histórico de compras individuais e métricas de relacionamento.
+4. **PDV**: Frente de caixa para montagem de pedidos, pagamento e emissão de comprovantes.
+5. **Vendas**: Acompanhamento de pedidos, consulta detalhada e operações de estorno/cancelamento.
+6. **Relatórios**: Visão geral financeira, análise de desempenho de peças, sugestões de compra para fornecedores e exportação em PDF.
+
+---
+
+## Modelagem de Produto e Variação
+
+Para refletir a realidade do varejo de moda, o catálogo opera sob uma relação de 1 para N entre o modelo e suas unidades físicas:
+
+* **Produto**: Entidade conceitual do modelo (nome, marca, categoria, valor de compra, valor de venda e estoque mínimo).
+* **VariacaoProduto**: Entidade física onde reside o saldo real de estoque (combinação de tamanho e cor).
 
 ```text
-Vestido Midi Floral
-├── P / Rosa   → 3 unidades
-├── M / Rosa   → 5 unidades
-├── M / Azul   → 4 unidades
-└── G / Azul   → 2 unidades
+Camisa Linho Alfaiataria (Produto)
+├── P / Off-White  →  4 unidades (Variação)
+├── M / Off-White  →  6 unidades (Variação)
+├── M / Terracota  →  3 unidades (Variação)
+└── G / Terracota  →  2 unidades (Variação)
 ```
 
-> [!NOTE]
-> O **estoque total** do produto é calculado dinamicamente em tempo real pela soma das quantidades de todas as suas variações ativas.
+O estoque exibido no catálogo é a consolidação dinâmica das quantidades das variações ativas.
 
 ---
 
-## 🛠️ Tecnologias
+## Arquitetura e Estrutura
 
-### Backend
-- **C# / .NET 10** (ASP.NET Core Web API)
-- **Entity Framework Core 9** com **Pomelo MySQL Provider**
-- **MySQL 8.0**
-- **Autenticação JWT** (JSON Web Tokens com Bearer Scheme)
-- **QuestPDF** (Geração de relatórios executivos em PDF)
-- **BCrypt.Net** (Hashing seguro de senhas)
-- **Swagger / OpenAPI** (Documentação interativa da API)
-
-### Frontend
-- **Vue 3** (Composition API & `<script setup>`)
-- **TypeScript**
-- **Vite 8** (Build tool e ambiente de desenvolvimento)
-- **Pinia** (Gerenciamento de estado global)
-- **Vue Router** (Roteamento SPA)
-
----
-
-## 📁 Estrutura do projeto
+A solução adota separação em camadas inspirada na Clean Architecture:
 
 ```text
 day-mendes-store/
 ├── backend/
-│   ├── DayMendesStore.API/            # Controllers REST, Middlewares, Auth e Swagger
-│   ├── DayMendesStore.Application/    # DTOs, Interfaces de Serviço e Casos de Uso
-│   ├── DayMendesStore.Domain/         # Entidades, Enums e Regras de Negócio Puras
-│   └── DayMendesStore.Infrastructure/ # DbContext, Mapeamentos EF Core e Repositórios
+│   ├── DayMendesStore.API/            # Controllers REST, autenticação JWT, upload e middlewares
+│   ├── DayMendesStore.Application/    # Casos de uso, interfaces, DTOs e serviços (QuestPDF, relatórios)
+│   ├── DayMendesStore.Domain/         # Entidades puras, enums de status e regras de domínio
+│   ├── DayMendesStore.Infrastructure/ # DbContext, mapeamentos EF Core, migrações e repositórios
+│   └── DayMendesStore.slnx            # Arquivo de solução .NET
 │
-├── frontend/                          # Aplicação SPA (Vue 3, TypeScript, Vite e Pinia)
-└── logo/                              # Identidade visual oficial da marca
+├── frontend/                          # Aplicação SPA modular (Vue 3, TypeScript e Vite)
+│   ├── src/
+│   │   ├── components/                # Componentes organizados por domínio (produtos, pdv, vendas, clientes)
+│   │   ├── pages/                     # Telas de login e fluxos principais
+│   │   ├── api.ts                     # Camada de comunicação HTTP tipada
+│   │   └── App.vue                    # Shell principal da aplicação com navegação responsiva
+│
+└── logo/                              # Identidade visual da marca Day Mendes Store
 ```
 
 ---
 
-## 🚀 Como executar
+## Tecnologias Utilizadas
 
-### Pré-requisitos
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Node.js](https://nodejs.org/) (v22 ou superior)
-- [MySQL Server 8.0+](https://dev.mysql.com/downloads/mysql/)
+### Backend
+* **C# 14 / .NET 10**: Runtime e framework da API REST (ASP.NET Core).
+* **Entity Framework Core 9**: ORM para persistência e mapeamento objeto-relacional.
+* **Pomelo.EntityFrameworkCore.MySql**: Driver otimizado para integração com MySQL Server.
+* **MySQL 8.0**: Banco de dados relacional.
+* **QuestPDF (2026.8.0)**: Biblioteca para diagramação e renderização de relatórios em PDF.
+* **BCrypt.Net-Next**: Hashing seguro e verificação de senhas.
+* **System.IdentityModel.Tokens.Jwt**: Emissão e validação de tokens JWT.
+* **Swagger / Swashbuckle**: Documentação interativa e testes de endpoints.
+
+### Frontend
+* **Vue.js 3**: Framework progressivo utilizando Composition API e sintaxe `<script setup>`.
+* **TypeScript**: Tipagem estrita de contratos de dados e componentes.
+* **Vite 8**: Ferramenta de build rápido e servidor de desenvolvimento.
+* **CSS Nativo**: Estilização moderna, responsiva e alinhada à paleta da marca (Marsala e neutros quentes).
 
 ---
 
-### 1. Backend
+## Como Executar Localmente
 
-1. Acesse a pasta do backend:
+### Pré-requisitos
+* [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) instalado.
+* [Node.js](https://nodejs.org/) (versão 22 ou superior) instalado.
+* [MySQL Server 8.0+](https://dev.mysql.com/downloads/mysql/) em execução.
+
+---
+
+### 1. Configuração e Execução do Backend
+
+1. Navegue até o diretório do backend:
    ```bash
    cd backend
    ```
 
-2. Configure a string de conexão do MySQL no arquivo `DayMendesStore.API/appsettings.json`:
+2. Configure a conexão com o banco de dados no arquivo `DayMendesStore.API/appsettings.json` ou defina as variáveis de ambiente equivalentes:
    ```json
    "ConnectionStrings": {
      "DefaultConnection": "Server=localhost;Port=3306;Database=day_mendes_store;User=root;Password=SUA_SENHA_AQUI;"
    }
    ```
 
-3. Aplique as migrações no banco de dados:
+3. Aplique as migrações do Entity Framework para criar as tabelas no MySQL:
    ```bash
    dotnet ef database update --project DayMendesStore.Infrastructure --startup-project DayMendesStore.API
    ```
 
-4. Execute a API:
+4. Execute o servidor da API:
    ```bash
    dotnet run --project DayMendesStore.API
    ```
 
-A API estará em execução em `http://localhost:5114`.
+A API estará disponível em `http://localhost:5114`.
+
+A documentação Swagger interativa poderá ser acessada em `http://localhost:5114/swagger`.
 
 ---
 
-### 2. Frontend
+### 2. Configuração e Execução do Frontend
 
-1. Em um novo terminal, acesse a pasta do frontend:
+1. Em outro terminal, navegue até o diretório do frontend:
    ```bash
    cd frontend
    ```
@@ -146,43 +219,21 @@ A API estará em execução em `http://localhost:5114`.
    npm install
    ```
 
-3. Inicie a aplicação:
+3. Inicie o servidor de desenvolvimento:
    ```bash
    npm run dev
    ```
 
-A aplicação estará acessível em `http://localhost:5173`.
+A interface web estará acessível em `http://localhost:5173`.
 
 ---
 
-## 📊 Relatórios
+## Qualidade e Validação
 
-A API disponibiliza endpoints para acompanhamento operacional e financeiro da loja:
-
-- **Dashboard Geral**: Indicadores de faturamento, total de vendas e ticket médio por período.
-- **Produtos Mais e Menos Vendidos**: Ranking por quantidade de itens e volume financeiro.
-- **Análise por Tamanho**: Desempenho de vendas agrupado por numeração.
-- **Estoque Baixo & Sugestão de Reposição**: Alertas de produtos abaixo do estoque mínimo e cálculo para compra.
-- **Produtos Parados**: Itens sem movimentação no intervalo consultado.
-- **Melhores Clientes**: Identificação dos clientes com maior frequência de compra.
-- **Relatório Executivo em PDF**: Relatório diagramado e pronto para download via **QuestPDF**.
-
----
-
-## 📚 API
-
-A API conta com documentação interativa gerada pelo **Swagger / OpenAPI**, permitindo testar requisições e realizar autenticação Bearer JWT diretamente pela interface web:
-
-* **URL do Swagger UI**: [http://localhost:5114/swagger](http://localhost:5114/swagger)
-
----
-
-## 💡 Principais decisões
-
-- **Estoque por Variação**: O controle de saldo reside exclusivamente na combinação de tamanho e cor, atendendo à realidade do varejo de moda.
-- **Preço Centralizado no Produto**: Valores de compra e venda são unificados no cadastro do modelo, simplificando a precificação.
-- **Transações Atômicas**: Operações de venda e estorno são executadas com garantia transacional, prevenindo inconsistências no estoque.
-- **Preservação de Histórico**: Registros vinculados a vendas utilizam exclusão lógica (*soft delete*), mantendo a integridade histórica e contábil.
+* **Tipagem Estrita**: O frontend possui verificação de tipos completa através do `vue-tsc --build`, garantindo conformidade entre as respostas da API e os componentes visuais.
+* **Validação de Build**: Processo de build de produção verificado via `npm run build` (Vite + `vue-tsc`).
+* **Documentação de Endpoints**: Todas as rotas REST são mapeadas e testáveis diretamente pelo Swagger UI com suporte à autenticação Bearer JWT.
+* **Testes Automatizados**: A versão atual do projeto foca na validação manual integrada e testes pontuais via Swagger; suítes de testes de unidade automatizados (xUnit/Vitest) estão planejadas para os próximos ciclos de desenvolvimento.
 
 ---
 
