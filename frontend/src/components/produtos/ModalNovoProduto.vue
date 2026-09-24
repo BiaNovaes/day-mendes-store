@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
-import { api, type Categoria } from '../../api'
+import { computed, reactive, ref, watch } from 'vue'
+import { api, getProductImageUrl, type Categoria, type Produto } from '../../api'
 
 const props = defineProps<{
   open: boolean
   categorias: Categoria[]
+  produto?: Produto | null
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'success'): void
+  (e: 'delete', produto: Produto): void
 }>()
+
+const isEditing = computed(() => Boolean(props.produto && props.produto.id))
 
 const form = reactive({
   nome: '',
@@ -27,25 +31,63 @@ const form = reactive({
 
 const loading = ref(false)
 const error = ref('')
+const imageError = ref('')
+
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const selectedFile = ref<File | null>(null)
+const previewUrl = ref('')
+const currentFoto = ref('')
+const removeFoto = ref(false)
+
+function cleanupPreview() {
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+}
 
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
-      Object.assign(form, {
-        nome: '',
-        categoriaId: '',
-        marca: '',
-        descricao: '',
-        valorCompra: '',
-        valorVenda: '',
-        estoqueMinimo: '1',
-        tamanho: '',
-        cor: '',
-        quantidadeEstoque: '0',
-      })
+      cleanupPreview()
+      selectedFile.value = null
+      removeFoto.value = false
+      imageError.value = ''
       error.value = ''
       loading.value = false
+
+      if (props.produto) {
+        Object.assign(form, {
+          nome: props.produto.nome ?? '',
+          categoriaId: props.produto.categoriaId ? String(props.produto.categoriaId) : '',
+          marca: props.produto.marca ?? '',
+          descricao: props.produto.descricao ?? '',
+          valorCompra: props.produto.valorCompra !== undefined ? String(props.produto.valorCompra) : '',
+          valorVenda: props.produto.valorVenda !== undefined ? String(props.produto.valorVenda) : '',
+          estoqueMinimo: props.produto.estoqueMinimo !== undefined ? String(props.produto.estoqueMinimo) : '1',
+          tamanho: '',
+          cor: '',
+          quantidadeEstoque: '0',
+        })
+        currentFoto.value = props.produto.foto ?? ''
+      } else {
+        Object.assign(form, {
+          nome: '',
+          categoriaId: '',
+          marca: '',
+          descricao: '',
+          valorCompra: '',
+          valorVenda: '',
+          estoqueMinimo: '1',
+          tamanho: '',
+          cor: '',
+          quantidadeEstoque: '0',
+        })
+        currentFoto.value = ''
+      }
+    } else {
+      cleanupPreview()
     }
   }
 )
@@ -62,32 +104,117 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function handleFileChange(event: Event) {
+  imageError.value = ''
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const validExtensions = ['jpg', 'jpeg', 'png', 'webp']
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  const validMimes = ['image/jpeg', 'image/png', 'image/webp']
+
+  if (!validMimes.includes(file.type) && !validExtensions.includes(ext)) {
+    imageError.value = 'Formato inválido. Formatos permitidos: JPG, PNG ou WEBP.'
+    input.value = ''
+    return
+  }
+
+  const maxSizeInBytes = 10 * 1024 * 1024
+  if (file.size > maxSizeInBytes) {
+    imageError.value = 'A imagem é muito grande. O tamanho máximo permitido é 10 MB.'
+    input.value = ''
+    return
+  }
+
+  cleanupPreview()
+  selectedFile.value = file
+  previewUrl.value = URL.createObjectURL(file)
+  removeFoto.value = false
+  input.value = ''
+}
+
+function handleRemoveSelectedImage() {
+  cleanupPreview()
+  selectedFile.value = null
+  imageError.value = ''
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
+function handleRemoveExistingImage() {
+  handleRemoveSelectedImage()
+  removeFoto.value = true
+}
+
+function handleUndoRemoveExistingImage() {
+  removeFoto.value = false
+}
+
 async function handleSubmit() {
   if (!form.nome.trim() || !form.categoriaId) return
   loading.value = true
   error.value = ''
+  imageError.value = ''
 
   try {
-    await api.salvarProduto({
-      categoriaId: Number(form.categoriaId),
-      nome: form.nome.trim(),
-      marca: form.marca.trim() || null,
-      descricao: form.descricao.trim() || null,
-      valorCompra: Number(form.valorCompra) || 0,
-      valorVenda: Number(form.valorVenda) || 0,
-      estoqueMinimo: Number(form.estoqueMinimo) || 0,
-      variacoes: [
-        {
-          tamanho: form.tamanho.trim() || 'U',
-          cor: form.cor.trim() || 'Padrão',
-          quantidadeEstoque: Number(form.quantidadeEstoque) || 0,
-        },
-      ],
-    })
+    let fotoUrl: string | null = null
+
+    if (selectedFile.value) {
+      const uploadRes = await api.uploadFoto(selectedFile.value)
+      fotoUrl = uploadRes.url
+    } else if (removeFoto.value) {
+      fotoUrl = ''
+    } else if (currentFoto.value) {
+      fotoUrl = currentFoto.value
+    }
+
+    if (isEditing.value && props.produto) {
+      await api.atualizarProduto(props.produto.id, {
+        categoriaId: Number(form.categoriaId),
+        nome: form.nome.trim(),
+        marca: form.marca.trim() || null,
+        descricao: form.descricao.trim() || null,
+        valorCompra: Number(form.valorCompra) || 0,
+        valorVenda: Number(form.valorVenda) || 0,
+        estoqueMinimo: Number(form.estoqueMinimo) || 0,
+        foto: fotoUrl,
+      })
+    } else {
+      await api.salvarProduto({
+        categoriaId: Number(form.categoriaId),
+        nome: form.nome.trim(),
+        marca: form.marca.trim() || null,
+        descricao: form.descricao.trim() || null,
+        valorCompra: Number(form.valorCompra) || 0,
+        valorVenda: Number(form.valorVenda) || 0,
+        estoqueMinimo: Number(form.estoqueMinimo) || 0,
+        foto: fotoUrl || null,
+        variacoes: [
+          {
+            tamanho: form.tamanho.trim() || 'U',
+            cor: form.cor.trim() || 'Padrão',
+            quantidadeEstoque: Number(form.quantidadeEstoque) || 0,
+          },
+        ],
+      })
+    }
+
     emit('success')
     emit('close')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Erro ao cadastrar produto.'
+    error.value = err instanceof Error ? err.message : 'Erro ao salvar produto.'
   } finally {
     loading.value = false
   }
@@ -108,8 +235,12 @@ async function handleSubmit() {
       <div class="modal-card">
         <header class="modal-header">
           <div>
-            <h2 id="modal-produto-title" class="modal-title">Novo produto</h2>
-            <p class="modal-subtitle">Preencha as informações para cadastrar no catálogo</p>
+            <h2 id="modal-produto-title" class="modal-title">
+              {{ isEditing ? 'Editar produto' : 'Novo produto' }}
+            </h2>
+            <p class="modal-subtitle">
+              {{ isEditing ? 'Atualize as informações e a imagem do catálogo' : 'Preencha as informações para cadastrar no catálogo' }}
+            </p>
           </div>
           <button
             type="button"
@@ -174,6 +305,134 @@ async function handleSubmit() {
           </label>
 
           <div class="section-divider">
+            <span class="section-title">Imagem do produto</span>
+          </div>
+
+          <div class="image-upload-area">
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp"
+              class="hidden-file-input"
+              @change="handleFileChange"
+            />
+
+            <div v-if="previewUrl" class="image-card image-preview-card">
+              <div class="image-thumb-box">
+                <img :src="previewUrl" alt="Prévia da nova imagem" class="image-thumb-img" />
+              </div>
+              <div class="image-meta-box">
+                <span class="image-filename" :title="selectedFile?.name">
+                  {{ selectedFile?.name }}
+                </span>
+                <span class="image-subtext">
+                  <span class="tag-pending">Nova imagem</span>
+                  <span v-if="selectedFile">{{ formatFileSize(selectedFile.size) }}</span>
+                </span>
+              </div>
+              <div class="image-actions-box">
+                <button
+                  type="button"
+                  class="btn-text-danger"
+                  title="Remover imagem selecionada"
+                  @click="handleRemoveSelectedImage"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  <span>Remover</span>
+                </button>
+              </div>
+            </div>
+
+            <div v-else-if="removeFoto" class="image-card image-removed-card">
+              <div class="removed-icon-box" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+              </div>
+              <div class="image-meta-box">
+                <span class="image-filename">Imagem marcada para exclusão</span>
+                <span class="image-subtext">A remoção será concluída ao salvar</span>
+              </div>
+              <div class="image-actions-box">
+                <button
+                  type="button"
+                  class="btn-action-sm btn-ghost-sm"
+                  @click="handleUndoRemoveExistingImage"
+                >
+                  Desfazer
+                </button>
+                <button
+                  type="button"
+                  class="btn-action-sm btn-secondary-sm"
+                  @click="triggerFileInput"
+                >
+                  Nova imagem
+                </button>
+              </div>
+            </div>
+
+            <div v-else-if="currentFoto" class="image-card image-existing-card">
+              <div class="image-thumb-box">
+                <img :src="getProductImageUrl(currentFoto)" alt="Imagem atual do produto" class="image-thumb-img" />
+              </div>
+              <div class="image-meta-box">
+                <span class="image-filename">Imagem atual cadastrada</span>
+                <span class="image-subtext">Visível no catálogo</span>
+              </div>
+              <div class="image-actions-box">
+                <button
+                  type="button"
+                  class="btn-action-sm btn-secondary-sm"
+                  title="Selecionar outra imagem para substituir"
+                  @click="triggerFileInput"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <span>Substituir</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn-text-danger"
+                  title="Excluir imagem do produto"
+                  @click="handleRemoveExistingImage"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  <span>Remover</span>
+                </button>
+              </div>
+            </div>
+
+            <div v-else class="image-empty-box">
+              <button
+                type="button"
+                class="btn-select-image"
+                @click="triggerFileInput"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span>Selecionar imagem</span>
+              </button>
+              <span class="image-hint-text">Formatos permitidos: JPG, PNG ou WEBP (até 10 MB)</span>
+            </div>
+
+            <p v-if="imageError" class="image-field-error">{{ imageError }}</p>
+          </div>
+
+          <div class="section-divider">
             <span class="section-title">Valores e estoque</span>
           </div>
 
@@ -217,62 +476,80 @@ async function handleSubmit() {
             </label>
           </div>
 
-          <div class="section-divider">
-            <span class="section-title">Variação inicial</span>
-          </div>
+          <template v-if="!isEditing">
+            <div class="section-divider">
+              <span class="section-title">Variação inicial</span>
+            </div>
 
-          <div class="form-row three-cols">
-            <label class="form-label">
-              <span>Tamanho <strong class="req">*</strong></span>
-              <input
-                v-model="form.tamanho"
-                type="text"
-                class="form-input"
-                placeholder="Ex: M, Único, 38..."
-                required
-              />
-            </label>
+            <div class="form-row three-cols">
+              <label class="form-label">
+                <span>Tamanho <strong class="req">*</strong></span>
+                <input
+                  v-model="form.tamanho"
+                  type="text"
+                  class="form-input"
+                  placeholder="Ex: M, Único, 38..."
+                  required
+                />
+              </label>
 
-            <label class="form-label">
-              <span>Cor <strong class="req">*</strong></span>
-              <input
-                v-model="form.cor"
-                type="text"
-                class="form-input"
-                placeholder="Ex: Preto, Marsala..."
-                required
-              />
-            </label>
+              <label class="form-label">
+                <span>Cor <strong class="req">*</strong></span>
+                <input
+                  v-model="form.cor"
+                  type="text"
+                  class="form-input"
+                  placeholder="Ex: Preto, Marsala..."
+                  required
+                />
+              </label>
 
-            <label class="form-label">
-              <span>Qtd. em estoque <strong class="req">*</strong></span>
-              <input
-                v-model="form.quantidadeEstoque"
-                type="number"
-                min="0"
-                class="form-input"
-                placeholder="0"
-                required
-              />
-            </label>
-          </div>
+              <label class="form-label">
+                <span>Qtd. em estoque <strong class="req">*</strong></span>
+                <input
+                  v-model="form.quantidadeEstoque"
+                  type="number"
+                  min="0"
+                  class="form-input"
+                  placeholder="0"
+                  required
+                />
+              </label>
+            </div>
+          </template>
 
           <footer class="modal-footer">
             <button
+              v-if="isEditing && produto"
               type="button"
-              class="btn btn-secondary"
-              @click="emit('close')"
+              class="btn-delete-link"
               :disabled="loading"
+              @click="emit('delete', produto)"
             >
-              Cancelar
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              <span>Excluir produto</span>
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              :disabled="loading || !form.nome.trim() || !form.categoriaId"
-            >
-              {{ loading ? 'Salvando...' : 'Cadastrar produto' }}
-            </button>
+
+            <div class="footer-end-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="emit('close')"
+                :disabled="loading"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                :disabled="loading || !form.nome.trim() || !form.categoriaId"
+              >
+                {{ loading ? 'Salvando...' : (isEditing ? 'Salvar alterações' : 'Cadastrar produto') }}
+              </button>
+            </div>
           </footer>
         </form>
       </div>
@@ -449,13 +726,255 @@ async function handleSubmit() {
   color: #8b807b;
 }
 
+.image-upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.image-empty-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: #faf8f6;
+  border: 1.5px dashed #d8cfca;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-select-image {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1.5px solid #d8cfca;
+  color: #25201f;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.btn-select-image:hover {
+  background: #eee7e3;
+  border-color: #bfaea6;
+}
+
+.image-hint-text {
+  font-size: 0.78rem;
+  color: #8b807b;
+}
+
+.image-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #faf8f6;
+  border: 1px solid #e5ddd8;
+  border-radius: 8px;
+}
+
+.image-preview-card {
+  background: #fdfaf9;
+  border-color: #e5ddd8;
+}
+
+.image-existing-card {
+  background: #faf8f6;
+  border-color: #e5ddd8;
+}
+
+.image-removed-card {
+  background: #fff8f8;
+  border: 1px dashed #f1bdc8;
+}
+
+.image-thumb-box {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #d8cfca;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.removed-icon-box {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-meta-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.image-filename {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #25201f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.image-subtext {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: #8b807b;
+}
+
+.tag-pending {
+  background: #fdf2f4;
+  color: #b33f62;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #fecdd3;
+}
+
+.image-actions-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-action-sm {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary-sm {
+  background: #ffffff;
+  border-color: #d8cfca;
+  color: #625955;
+}
+
+.btn-secondary-sm:hover {
+  background: #eee7e3;
+  color: #25201f;
+}
+
+.btn-ghost-sm {
+  background: transparent;
+  border-color: #d8cfca;
+  color: #625955;
+}
+
+.btn-ghost-sm:hover {
+  background: #eee7e3;
+}
+
+.btn-text-danger {
+  min-height: 32px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: #991b1b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.btn-text-danger:hover {
+  background: #fee2e2;
+}
+
+.image-field-error {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #991b1b;
+}
+
 .modal-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin-top: 6px;
   padding-top: 16px;
   border-top: 1px solid #eee7e3;
+  flex-wrap: wrap;
+}
+
+.footer-end-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.btn-delete-link {
+  background: transparent;
+  border: 1.5px solid #fecaca;
+  color: #dc2626;
+  padding: 0 14px;
+  min-height: 42px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-delete-link:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.btn-delete-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn {
@@ -497,6 +1016,17 @@ async function handleSubmit() {
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .image-card,
+  .image-empty-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .image-actions-box {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>
