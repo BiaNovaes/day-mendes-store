@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { api, clearAuthToken, hasAuthToken, type Categoria, type Cliente, type Dashboard, type Loja, type Produto, type ProdutoEstoqueBaixo, type VariacaoProduto, type Venda } from './api'
+import { api, calcularEstoqueTotal, clearAuthToken, hasAuthToken, type Categoria, type Cliente, type Dashboard, type Loja, type Produto, type ProdutoEstoqueBaixo, type VariacaoProduto, type Venda } from './api'
 import Sidebar, { type View } from './components/Sidebar.vue'
 import MobileBottomNav from './components/MobileBottomNav.vue'
 import Relatorio from './components/Relatorio.vue'
@@ -8,6 +8,7 @@ import Vendas from './components/vendas/Vendas.vue'
 import Pdv from './components/pdv/Pdv.vue'
 import Login from './pages/Login.vue'
 import Produtos from './components/produtos/Produtos.vue'
+import ModalClienteDetalhes from './components/clientes/ModalClienteDetalhes.vue'
 
 const loading = ref(false)
 const error = ref('')
@@ -30,8 +31,8 @@ const menu: Array<{ id: View; label: string }> = [
   { id: 'vendas', label: 'Vendas' },
   { id: 'relatorios', label: 'Relatórios' },
 ]
-const activeProducts = computed(() => produtos.value.filter((produto) => produto.status === 1))
-const availableVariations = computed(() => activeProducts.value.flatMap((produto) => produto.variacoes.filter((variacao) => variacao.status === 1 && variacao.quantidadeEstoque > 0).map((variacao) => ({ produto, variacao }))))
+const activeProducts = computed(() => produtos.value.filter((produto) => (produto.status as number) === 1))
+const availableVariations = computed(() => activeProducts.value.flatMap((produto) => (produto.variacoes || []).filter((variacao) => (variacao.status as number) === 1 && variacao.quantidadeEstoque > 0).map((variacao) => ({ produto, variacao }))))
 const clienteSearch = ref('')
 const filteredClientes = computed(() => {
   const term = clienteSearch.value.trim().toLowerCase()
@@ -45,7 +46,7 @@ const filteredClientes = computed(() => {
   })
 })
 const currentTitle = computed(() => menu.find((item) => item.id === view.value)?.label ?? 'Painel')
-const totalEstoque = computed(() => produtos.value.reduce((total, produto) => total + produto.estoqueTotal, 0))
+const totalEstoque = computed(() => activeProducts.value.reduce((total, produto) => total + calcularEstoqueTotal(produto), 0))
 function money(value?: number) { return currency.format(value ?? 0) }
 function statusText(status: number) { return status === 1 ? 'Ativo' : 'Inativo' }
 function vendaStatus(status: number) { return ({ 1: 'Rascunho', 2: 'Finalizada', 3: 'Cancelada' } as Record<number, string>)[status] ?? 'Pendente' }
@@ -62,6 +63,25 @@ async function handleLoginSuccess(loja: Loja) {
 function logout() { clearAuthToken(); isAuthenticated.value = false }
 async function runAndReload(action: () => Promise<void>) { loading.value = true; error.value = ''; try { await action(); await loadAll() } catch (err) { error.value = err instanceof Error ? err.message : 'Operacao nao concluida.' } finally { loading.value = false } }
 async function saveCliente() { await runAndReload(async () => { await api.salvarCliente(clienteForm); Object.assign(clienteForm, { nome: '', apelido: '', email: '', telefone: '', endereco: '' }) }) }
+const isClienteModalOpen = ref(false)
+const selectedCliente = ref<Cliente | null>(null)
+function openClienteDetalhes(cliente: Cliente) {
+  selectedCliente.value = cliente
+  isClienteModalOpen.value = true
+}
+function closeClienteDetalhes() {
+  isClienteModalOpen.value = false
+  selectedCliente.value = null
+}
+function handleClienteUpdated(updatedCliente: Cliente) {
+  const idx = clientes.value.findIndex((c) => c.id === updatedCliente.id)
+  if (idx !== -1) {
+    clientes.value[idx] = { ...clientes.value[idx], ...updatedCliente }
+  }
+  if (selectedCliente.value && selectedCliente.value.id === updatedCliente.id) {
+    selectedCliente.value = { ...selectedCliente.value, ...updatedCliente }
+  }
+}
 onMounted(() => { if (isAuthenticated.value) loadAll() })
 </script>
 
@@ -86,7 +106,7 @@ onMounted(() => { if (isAuthenticated.value) loadAll() })
       <section v-if="view === 'dashboard'" class="stack"><div class="metrics"><article><span>Faturamento</span><strong>{{ money(dashboard?.totalFaturado) }}</strong></article><article><span>Vendas</span><strong>{{ dashboard?.totalVendas ?? 0 }}</strong></article><article><span>Ticket medio</span><strong>{{ money(dashboard?.ticketMedio) }}</strong></article><article><span>Estoque</span><strong>{{ totalEstoque }}</strong></article></div><div class="panel"><h2>Estoque baixo</h2><div class="table"><div v-for="item in estoqueBaixo" :key="`${item.produtoId}-${item.tamanho}-${item.cor}`" class="row three"><span>{{ item.nome }}<small>{{ item.categoriaNome }}</small></span><span>{{ item.tamanho }} / {{ item.cor }}</span><strong>{{ item.estoqueAtual }}</strong></div></div><p v-if="!estoqueBaixo.length" class="empty">Nenhum produto abaixo do minimo.</p></div></section>
       <section v-if="view === 'produtos'" class="stack">
         <Produtos
-          :produtos="produtos"
+          :produtos="activeProducts"
           :categorias="categorias"
           :loading="loading"
           @refresh="loadAll"
@@ -135,11 +155,41 @@ onMounted(() => { if (isAuthenticated.value) loadAll() })
               </svg>
             </button>
           </div>
-          <div class="table">
-            <div v-for="cliente in filteredClientes" :key="cliente.id" class="row three">
-              <span>{{ cliente.nome }}<small>{{ cliente.apelido }}</small></span>
-              <span>{{ cliente.telefone || cliente.email || '-' }}</span>
-              <strong>{{ money(cliente.valorTotalComprado) }}</strong>
+          <div class="table client-table">
+            <div
+              v-for="cliente in filteredClientes"
+              :key="cliente.id"
+              class="client-row"
+              role="button"
+              tabindex="0"
+              :title="`Ver histórico e compras de ${cliente.nome}`"
+              :aria-label="`Ver histórico e compras de ${cliente.nome}`"
+              @click="openClienteDetalhes(cliente)"
+              @keydown.enter="openClienteDetalhes(cliente)"
+            >
+              <div class="client-row-avatar">
+                {{ cliente.nome.substring(0, 2).toUpperCase() }}
+              </div>
+              <div class="client-row-info">
+                <span class="client-row-name">
+                  {{ cliente.nome }}
+                  <small v-if="cliente.apelido" class="client-row-nickname">({{ cliente.apelido }})</small>
+                </span>
+                <span class="client-row-contact">
+                  {{ cliente.telefone || cliente.email || 'Sem contato' }}
+                </span>
+              </div>
+              <div class="client-row-metrics">
+                <strong class="client-row-total">{{ money(cliente.valorTotalComprado) }}</strong>
+                <span class="client-row-orders">
+                  {{ cliente.totalCompras || 0 }} {{ (cliente.totalCompras === 1) ? 'compra' : 'compras' }}
+                </span>
+              </div>
+              <div class="client-row-arrow" aria-hidden="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
             </div>
           </div>
           <p v-if="!filteredClientes.length" class="empty">
@@ -172,10 +222,30 @@ onMounted(() => { if (isAuthenticated.value) loadAll() })
       @navigate="(newView) => view = newView"
       @logout="logout"
     />
+    <ModalClienteDetalhes
+      :open="isClienteModalOpen"
+      :cliente="selectedCliente"
+      @close="closeClienteDetalhes"
+      @updated="handleClienteUpdated"
+    />
   </main>
 </template>
 
 <style scoped>
 :global(*){box-sizing:border-box}:global(body){margin:0;background:#f4f1ee;color:#25201f;font-family:Inter,system-ui,sans-serif}button,input,select,textarea{font:inherit}button{min-height:42px;border:0;border-radius:8px;background:#b33f62;color:#fff;cursor:pointer;font-weight:800;padding:0 16px}button:disabled{opacity:.65}input,select,textarea{width:100%;border:1px solid #d8cfca;border-radius:8px;background:#fff;color:#25201f;min-height:42px;padding:10px 12px}textarea{min-height:84px;resize:vertical}label{display:grid;gap:7px;color:#625955;font-size:.88rem;font-weight:800}h1,h2,p{margin:0}.muted,small{color:#8b807b}.auth-page{display:grid;min-height:100vh;padding:24px;background:#f4f1ee}.auth-panel{display:grid;gap:20px;margin:auto;width:100%;max-width:480px;padding:32px;background:#fff;border:1px solid #e5ddd8;border-radius:8px;box-shadow:0 28px 80px rgba(48,35,30,.16)}.auth-panel img{max-width:220px}.app-shell{display:flex;min-height:100vh;background:#f4f1ee}.content{flex:1;display:flex;flex-direction:column;gap:20px;padding:28px 36px;min-width:0}.topbar,.panel-header{display:flex;justify-content:space-between;align-items:center;gap:16px}.eyebrow{color:#9d3556;font-size:.76rem;font-weight:900;text-transform:uppercase}.form-grid,.stack{display:grid;gap:14px}.split{display:grid;grid-template-columns:minmax(300px,390px) 1fr;gap:20px;align-items:start}.panel,.metrics article{background:#fff;border:1px solid #e5ddd8;border-radius:8px;box-shadow:0 8px 26px rgba(48,35,30,.07);padding:20px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.metrics article{display:grid;gap:8px}.metrics strong{font-size:1.4rem}.table{display:grid;margin-top:14px}.row{display:grid;grid-template-columns:1.4fr 1fr .7fr .7fr;align-items:center;gap:12px;min-height:54px;border-top:1px solid #eee7e3;padding:10px 0}.row.three{grid-template-columns:1.4fr 1fr .7fr}.cart-row{grid-template-columns:1.4fr .45fr .8fr 42px}.row span:first-child{display:grid;gap:3px}.inline-fields{display:grid;grid-template-columns:1fr 1fr .8fr;gap:10px}.checkout{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:end;border-top:1px solid #eee7e3;margin-top:16px;padding-top:16px}.empty{background:#faf8f6;border:1px dashed #d8cfca;border-radius:8px;color:#756a65;margin-top:14px;padding:18px;text-align:center}.error{background:#fff0f2;border:1px solid #f1bdc8;border-radius:8px;color:#9b1c3f;padding:12px 14px}.small-button{min-height:34px}.icon-button{min-height:34px;width:34px;padding:0}.ghost{background:transparent;border:1px solid #d8cfca;color:#625955}@media(max-width:980px){.split,.metrics,.checkout{grid-template-columns:1fr}.topbar{align-items:stretch;flex-direction:column}.row,.row.three,.cart-row{grid-template-columns:1fr}}@media(max-width:768px){.app-shell{flex-direction:column}.content{padding:16px 14px calc(76px + env(safe-area-inset-bottom, 0px))}}@media(max-width:560px){.inline-fields{grid-template-columns:1fr}.panel,.metrics article,.auth-panel{padding:16px}.content{padding:14px 12px calc(76px + env(safe-area-inset-bottom, 0px))}}
 .client-search-wrapper{position:relative;display:flex;align-items:center;margin-top:12px}.client-search-icon{position:absolute;left:12px;font-size:.85rem;color:#8b807b;pointer-events:none}.client-search-input{width:100%;min-height:40px;padding:8px 36px 8px 36px;border:1.5px solid #d8cfca;border-radius:6px;background:#fff;color:#25201f;font-size:.86rem}.client-search-input:focus{outline:none;border-color:#b33f62;box-shadow:0 0 0 3px rgba(179,63,98,.1)}.btn-clear-client-search{position:absolute;right:8px;background:transparent;border:0;color:#8b807b;font-size:.85rem;cursor:pointer;padding:4px 6px;border-radius:4px;min-height:auto}.btn-clear-client-search:hover{color:#25201f;background:rgba(0,0,0,.05)}
+.client-table{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.client-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1px solid #eee7e3;border-radius:8px;cursor:pointer;transition:all .15s ease;outline:none}
+.client-row:hover{background:#faf8f6;border-color:#d8cfca;transform:translateY(-1px);box-shadow:0 4px 14px rgba(48,35,30,.06)}
+.client-row:focus-visible{border-color:#b33f62;box-shadow:0 0 0 3px rgba(179,63,98,.12)}
+.client-row-avatar{width:36px;height:36px;border-radius:50%;background:#fdf2f5;border:1px solid #f9ccd7;color:#832742;font-weight:800;font-size:.82rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.client-row-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.client-row-name{font-weight:700;font-size:.9rem;color:#25201f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.client-row-nickname{font-size:.76rem;font-weight:600;color:#832742}
+.client-row-contact{font-size:.78rem;color:#8b807b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client-row-metrics{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.client-row-total{font-size:.95rem;font-weight:800;color:#25201f}
+.client-row-orders{font-size:.72rem;color:#8b807b;font-weight:600}
+.client-row-arrow{color:#8b807b;display:flex;align-items:center;justify-content:center;transition:transform .15s ease,color .15s ease;flex-shrink:0}
+.client-row:hover .client-row-arrow{transform:translateX(2px);color:#b33f62}
 </style>

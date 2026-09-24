@@ -1,7 +1,16 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5114'
 
-export type Status = 0 | 1
+export type Status = 0 | 1 | 2 | 3
 export type StatusVenda = 1 | 2 | 3
+
+export function calcularEstoqueTotal(produto?: { variacoes?: Array<{ quantidadeEstoque?: number; status?: number | Status }> | null } | null): number {
+  if (!produto || !Array.isArray(produto.variacoes) || produto.variacoes.length === 0) {
+    return 0
+  }
+  return produto.variacoes
+    .filter((v) => v && (v.status === undefined || v.status === null || (v.status as number) === 1))
+    .reduce((sum, v) => sum + (Number(v.quantidadeEstoque) || 0), 0)
+}
 
 export interface PagedResult<T> {
   page: number
@@ -71,6 +80,8 @@ export interface Cliente {
   totalCompras: number
   valorTotalComprado: number
   ultimaCompraEm?: string
+  createdAt?: string
+  updatedAt?: string
 }
 export interface Venda {
   id: number
@@ -294,6 +305,16 @@ function query(params: Record<string, string | number | boolean | undefined | nu
   return text ? `?${text}` : ''
 }
 
+export function getProductImageUrl(foto?: string | null): string {
+  if (!foto || !foto.trim()) return ''
+  if (foto.startsWith('http://') || foto.startsWith('https://') || foto.startsWith('data:')) {
+    return foto
+  }
+  const baseUrl = (API_BASE_URL ?? 'http://localhost:5114').replace(/\/+$/, '')
+  const cleanPath = foto.startsWith('/') ? foto : `/${foto}`
+  return `${baseUrl}${cleanPath}`
+}
+
 export const api = {
   login: (email: string, senha: string) =>
     request<LoginResponse>('/api/auth/login', {
@@ -315,11 +336,68 @@ export const api = {
   categoriasAtivas: () => request<Categoria[]>('/api/categoria/ativas'),
   salvarCategoria: (payload: { nome: string; descricao?: string }) =>
     request<Categoria>('/api/categoria', { method: 'POST', body: JSON.stringify(payload) }),
-  produtos: (termoBusca = '') =>
-    request<PagedResult<Produto>>(`/api/produto${query({ pageSize: 100, termoBusca })}`),
-  produtosVenda: () => request<Produto[]>('/api/produto/ativos-para-venda'),
+  produtos: async (termoBusca = '') => {
+    const res = await request<PagedResult<Produto>>(`/api/produto${query({ pageSize: 100, termoBusca, status: 1 })}`)
+    if (res && Array.isArray(res.items)) {
+      res.items = res.items.filter((p) => (p.status as number) === 1)
+      res.items.forEach((p) => {
+        if (p.variacoes) {
+          p.variacoes = p.variacoes.filter((v) => (v.status as number) === 1)
+        }
+        const total = calcularEstoqueTotal(p)
+        p.estoqueTotal = total
+        p.quantidadeEstoque = total
+        p.estoqueBaixo = total <= (p.estoqueMinimo ?? 0)
+      })
+    }
+    return res
+  },
+  produtosVenda: async () => {
+    const list = await request<Produto[]>('/api/produto/ativos-para-venda')
+    if (Array.isArray(list)) {
+      const activeList = list.filter((p) => (p.status as number) === 1)
+      activeList.forEach((p) => {
+        if (p.variacoes) {
+          p.variacoes = p.variacoes.filter((v) => (v.status as number) === 1)
+        }
+        const total = calcularEstoqueTotal(p)
+        p.estoqueTotal = total
+        p.quantidadeEstoque = total
+        p.estoqueBaixo = total <= (p.estoqueMinimo ?? 0)
+      })
+      return activeList
+    }
+    return list
+  },
   salvarProduto: (payload: unknown) =>
     request<Produto>('/api/produto', { method: 'POST', body: JSON.stringify(payload) }),
+  atualizarProduto: (id: number, payload: unknown) =>
+    request<Produto>(`/api/produto/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  excluirProduto: (id: number) =>
+    request<{ message: string }>(`/api/produto/${id}`, { method: 'DELETE' }),
+  inativarProduto: (id: number) =>
+    request<{ message: string }>(`/api/produto/${id}/inativar`, { method: 'PATCH' }),
+  reativarProduto: (id: number) =>
+    request<{ message: string }>(`/api/produto/${id}/reativar`, { method: 'PATCH' }),
+  atualizarEstoqueVariacao: (variacaoId: number, quantidadeEstoque: number) =>
+    request<{
+      variacaoId: number
+      produtoId: number
+      tamanho: string
+      cor: string
+      quantidadeEstoque: number
+    }>(`/api/estoque/variacao/${variacaoId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantidadeEstoque }),
+    }),
+  uploadFoto: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request<{ url: string }>('/api/upload/foto', {
+      method: 'POST',
+      body: formData,
+    })
+  },
   clientes: (termoBusca = '') =>
     request<PagedResult<Cliente>>(`/api/cliente${query({ pageSize: 100, termoBusca })}`),
   clientesAtivos: () => request<Cliente[]>('/api/cliente/ativos'),
@@ -330,6 +408,20 @@ export const api = {
     telefone?: string
     endereco?: string
   }) => request<Cliente>('/api/cliente', { method: 'POST', body: JSON.stringify(payload) }),
+  atualizarCliente: (
+    id: number,
+    payload: {
+      nome: string
+      apelido?: string
+      email?: string
+      telefone?: string
+      endereco?: string
+    }
+  ) =>
+    request<Cliente>(`/api/cliente/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   vendas: (filtro?: VendaFiltro) =>
     request<PagedResult<Venda>>(`/api/venda${query({ pageSize: 50, ...filtro })}`),
   obterVenda: (id: number) => request<Venda>(`/api/venda/${id}`),
