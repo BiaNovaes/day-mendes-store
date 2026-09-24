@@ -18,6 +18,18 @@ const successMessage = ref('')
 const isFilterModalOpen = ref(false)
 const relatorio = ref<RelatorioCompleto | null>(null)
 const activeTab = ref<'geral' | 'pecas' | 'compras' | 'tamanhos'>('geral')
+const subTabPecas = ref<'maisVendidas' | 'estoqueBaixo' | 'paradas' | 'todas'>('maisVendidas')
+const subTabTamanhos = ref<'ambos' | 'tamanhos' | 'clientes'>('ambos')
+
+const temFiltrosAtivos = computed(() => {
+  return Boolean(filtros.dataInicio || filtros.dataFim || filtros.categoriaId || filtros.tamanho)
+})
+
+const totalPecasAlerta = computed(() => {
+  const baixo = relatorio.value?.produtosEstoqueBaixo.length || 0
+  const parados = relatorio.value?.produtosParados.length || 0
+  return baixo + parados
+})
 
 const filtros = reactive<RelatorioFiltro>({
   dataInicio: '',
@@ -159,9 +171,56 @@ onMounted(() => {
 
 <template>
   <div class="relatorios-container">
-    <header class="report-top-header">
-      <span class="header-tag">Gestão inteligente</span>
-      <h1 class="header-title">Relatório de exportação</h1>
+    <header class="report-topbar">
+      <div>
+        <p class="eyebrow">{{ loading ? 'Sincronizando' : 'Day Mendes Store' }}</p>
+        <h1 class="header-title">Relatórios</h1>
+      </div>
+      <div class="report-topbar-actions">
+        <button
+          type="button"
+          class="btn-report-ghost"
+          @click="carregarRelatorio"
+          :disabled="loading"
+          title="Atualizar dados do relatório"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+          </svg>
+          <span>Atualizar</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-report-filter"
+          :class="{ 'has-filter': temFiltrosAtivos }"
+          @click="abrirModalFiltros"
+          :disabled="loading"
+          title="Filtrar dados do relatório"
+        >
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+          </svg>
+          <span>Filtros</span>
+          <span v-if="temFiltrosAtivos" class="filter-dot-indicator"></span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-report-export"
+          :disabled="generatingPdf || loading"
+          @click="baixarPdf"
+          title="Exportar relatório em PDF"
+        >
+          <svg v-if="!generatingPdf" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span v-else class="btn-spinner"></span>
+          <span>{{ generatingPdf ? 'Gerando...' : 'Exportar PDF' }}</span>
+        </button>
+      </div>
     </header>
 
     <div v-if="successMessage" class="feedback-alert success">
@@ -180,64 +239,34 @@ onMounted(() => {
       <span>{{ error }}</span>
     </div>
 
-    <section class="report-summary-card">
-      <div class="summary-left">
-        <div class="summary-badge-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg>
-        </div>
-
-        <div class="summary-text-block">
-          <h2 class="summary-name">Relatório de vendas</h2>
-          <div class="summary-details">
-            <span class="detail-item">
-              <strong class="detail-label">Período:</strong> {{ periodoTexto }}
-            </span>
-            <span class="detail-sep">•</span>
-            <span class="detail-item">
-              <strong class="detail-label">Categorias:</strong> {{ categoriaTexto }}
-            </span>
-            <span class="detail-sep">•</span>
-            <span class="detail-item">
-              <strong class="detail-label">Tamanhos:</strong> {{ tamanhoTexto }}
-            </span>
-          </div>
-        </div>
+    <div class="report-filter-bar">
+      <div class="filter-chips">
+        <span class="filter-chip">
+          <span class="chip-label">Período:</span>
+          <strong>{{ periodoTexto }}</strong>
+        </span>
+        <span class="chip-sep">•</span>
+        <span class="filter-chip">
+          <span class="chip-label">Categoria:</span>
+          <strong>{{ categoriaTexto }}</strong>
+        </span>
+        <span class="chip-sep">•</span>
+        <span class="filter-chip">
+          <span class="chip-label">Tamanho:</span>
+          <strong>{{ tamanhoTexto }}</strong>
+        </span>
       </div>
-
-      <div class="summary-actions">
+      <div v-if="temFiltrosAtivos" class="filter-clear-wrap">
         <button
           type="button"
-          class="btn-filter-modal"
-          :disabled="loading"
-          @click="abrirModalFiltros"
+          class="btn-clear-inline"
+          @click="limparEAplicarFiltros"
+          title="Remover filtros aplicados"
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-          </svg>
-          <span>Filtrar relatório</span>
-        </button>
-
-        <button
-          type="button"
-          class="btn-export-pdf"
-          :disabled="generatingPdf || loading"
-          @click="baixarPdf"
-        >
-          <svg v-if="!generatingPdf" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          <span v-else class="btn-spinner"></span>
-          <span>{{ generatingPdf ? 'Gerando PDF...' : 'Exportar PDF' }}</span>
+          Limpar filtros
         </button>
       </div>
-    </section>
+    </div>
 
     <Teleport to="body">
       <div v-if="isFilterModalOpen" class="modal-overlay" @click.self="isFilterModalOpen = false">
@@ -312,15 +341,14 @@ onMounted(() => {
       </div>
     </Teleport>
 
-    <nav class="report-nav-tabs">
+    <nav class="report-nav-tabs" role="tablist">
       <button
         type="button"
         class="nav-tab-btn"
         :class="{ active: activeTab === 'geral' }"
         @click="activeTab = 'geral'"
       >
-        <span class="tab-label-desktop">Visão geral das vendas</span>
-        <span class="tab-label-mobile">Visão geral</span>
+        <span>Visão geral</span>
       </button>
 
       <button
@@ -329,8 +357,10 @@ onMounted(() => {
         :class="{ active: activeTab === 'pecas' }"
         @click="activeTab = 'pecas'"
       >
-        <span class="tab-label-desktop">Desempenho das peças</span>
-        <span class="tab-label-mobile">Peças</span>
+        <span>Peças</span>
+        <span v-if="totalPecasAlerta > 0" class="badge-tab-warning" title="Peças com estoque baixo ou paradas">
+          {{ totalPecasAlerta }}
+        </span>
       </button>
 
       <button
@@ -339,8 +369,7 @@ onMounted(() => {
         :class="{ active: activeTab === 'compras' }"
         @click="activeTab = 'compras'"
       >
-        <span class="tab-label-desktop">Sugestões de compra (Brás)</span>
-        <span class="tab-label-mobile">Compras</span>
+        <span>Sugestões de compra</span>
         <span v-if="relatorio?.sugestoesReposicao.length" class="badge-tab-counter">
           {{ relatorio.sugestoesReposicao.length }}
         </span>
@@ -352,8 +381,7 @@ onMounted(() => {
         :class="{ active: activeTab === 'tamanhos' }"
         @click="activeTab = 'tamanhos'"
       >
-        <span class="tab-label-desktop">Tamanhos e clientes</span>
-        <span class="tab-label-mobile">Tamanhos</span>
+        <span>Tamanhos e clientes</span>
       </button>
     </nav>
 
@@ -435,125 +463,179 @@ onMounted(() => {
     </div>
 
     <div v-else-if="activeTab === 'pecas'" class="tab-pane">
-      <div class="two-columns-grid">
-        <div class="content-box">
-          <h3 class="box-title">Peças mais vendidas</h3>
-          <div v-if="relatorio?.produtosMaisVendidos.length">
-            <div class="table-container desktop-table-view">
-              <table class="styled-table">
-                <thead>
-                  <tr>
-                    <th>Peça</th>
-                    <th>Tam/Cor</th>
-                    <th class="text-right">Qtd</th>
-                    <th class="text-right">Total</th>
-                    <th class="text-right">Lucro</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="p in relatorio.produtosMaisVendidos" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
-                    <td><strong>{{ p.nome }}</strong></td>
-                    <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
-                    <td class="text-right font-bold">{{ p.quantidadeVendida }}</td>
-                    <td class="text-right">{{ money(p.valorTotalVendido) }}</td>
-                    <td class="text-right text-success font-bold">{{ money(p.lucroEstimado) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+      <div class="subnav-segmented" role="tablist">
+        <button
+          type="button"
+          class="subnav-pill"
+          :class="{ active: subTabPecas === 'maisVendidas' }"
+          @click="subTabPecas = 'maisVendidas'"
+        >
+          <span>Mais vendidas</span>
+          <span v-if="relatorio?.produtosMaisVendidos.length" class="subnav-pill-badge">
+            {{ relatorio.produtosMaisVendidos.length }}
+          </span>
+        </button>
 
-            <div class="mobile-cards-list">
-              <article
-                v-for="p in relatorio.produtosMaisVendidos"
-                :key="`${p.produtoId}-${p.tamanho}-${p.cor}`"
-                class="mobile-product-card"
-              >
-                <div class="mobile-card-top">
-                  <strong class="mobile-card-title">{{ p.nome }}</strong>
-                  <span class="mobile-card-tag">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</span>
-                </div>
-                <div class="mobile-card-metrics">
-                  <div class="mobile-metric-item">
-                    <span class="m-label">Vendas</span>
-                    <strong class="m-value">{{ p.quantidadeVendida }} un</strong>
-                  </div>
-                  <div class="mobile-metric-item">
-                    <span class="m-label">Faturamento</span>
-                    <strong class="m-value">{{ money(p.valorTotalVendido) }}</strong>
-                  </div>
-                  <div class="mobile-metric-item">
-                    <span class="m-label">Lucro est.</span>
-                    <strong class="m-value text-success">{{ money(p.lucroEstimado) }}</strong>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-          <p v-else class="empty-notice">Nenhuma peça vendida no período.</p>
-        </div>
+        <button
+          type="button"
+          class="subnav-pill"
+          :class="{ active: subTabPecas === 'estoqueBaixo' }"
+          @click="subTabPecas = 'estoqueBaixo'"
+        >
+          <span>Estoque baixo</span>
+          <span v-if="relatorio?.produtosEstoqueBaixo.length" class="subnav-pill-badge warning">
+            {{ relatorio.produtosEstoqueBaixo.length }}
+          </span>
+        </button>
 
-        <div class="content-box">
-          <h3 class="box-title">Peças com pouco estoque</h3>
-          <div v-if="relatorio?.produtosEstoqueBaixo.length">
-            <div class="table-container desktop-table-view">
-              <table class="styled-table">
-                <thead>
-                  <tr>
-                    <th>Peça</th>
-                    <th>Tam/Cor</th>
-                    <th class="text-right">Atual</th>
-                    <th class="text-right">Mínimo</th>
-                    <th>Situação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="p in relatorio.produtosEstoqueBaixo" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
-                    <td><strong>{{ p.nome }}</strong></td>
-                    <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
-                    <td class="text-right font-bold">{{ p.estoqueAtual }}</td>
-                    <td class="text-right text-muted">{{ p.estoqueMinimo }}</td>
-                    <td>
-                      <span class="pill-badge" :class="p.estoqueAtual === 0 ? 'danger' : 'warning'">
-                        {{ p.statusEstoque }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <button
+          type="button"
+          class="subnav-pill"
+          :class="{ active: subTabPecas === 'paradas' }"
+          @click="subTabPecas = 'paradas'"
+        >
+          <span>Peças paradas (> 30d)</span>
+          <span v-if="relatorio?.produtosParados.length" class="subnav-pill-badge">
+            {{ relatorio.produtosParados.length }}
+          </span>
+        </button>
 
-            <div class="mobile-cards-list">
-              <article
-                v-for="p in relatorio.produtosEstoqueBaixo"
-                :key="`${p.produtoId}-${p.tamanho}-${p.cor}`"
-                class="mobile-product-card"
-              >
-                <div class="mobile-card-top">
-                  <strong class="mobile-card-title">{{ p.nome }}</strong>
-                  <span class="pill-badge" :class="p.estoqueAtual === 0 ? 'danger' : 'warning'">
-                    {{ p.statusEstoque }}
-                  </span>
-                </div>
-                <span class="mobile-card-subtitle">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</span>
-                <div class="mobile-card-metrics">
-                  <div class="mobile-metric-item">
-                    <span class="m-label">Estoque atual</span>
-                    <strong class="m-value" :class="p.estoqueAtual === 0 ? 'text-danger' : ''">{{ p.estoqueAtual }} un</strong>
-                  </div>
-                  <div class="mobile-metric-item">
-                    <span class="m-label">Estoque mínimo</span>
-                    <span class="m-value">{{ p.estoqueMinimo }} un</span>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-          <p v-else class="empty-notice">Todas as peças estão com níveis adequados de estoque.</p>
-        </div>
+        <button
+          type="button"
+          class="subnav-pill"
+          :class="{ active: subTabPecas === 'todas' }"
+          @click="subTabPecas = 'todas'"
+        >
+          <span>Ver todas</span>
+        </button>
       </div>
 
-      <div class="content-box mt-16">
-        <h3 class="box-title">💤 Peças paradas (> 30 dias sem venda)</h3>
+      <div v-if="subTabPecas === 'maisVendidas' || subTabPecas === 'todas'" class="content-box">
+        <div class="box-header-wrap">
+          <h3 class="box-title">Peças mais vendidas</h3>
+          <p class="box-desc">Produtos com maior volume e rentabilidade no período</p>
+        </div>
+        <div v-if="relatorio?.produtosMaisVendidos.length">
+          <div class="table-container desktop-table-view">
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Peça</th>
+                  <th>Tam/Cor</th>
+                  <th class="text-right">Qtd</th>
+                  <th class="text-right">Total</th>
+                  <th class="text-right">Lucro</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in relatorio.produtosMaisVendidos" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
+                  <td><strong>{{ p.nome }}</strong></td>
+                  <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
+                  <td class="text-right font-bold">{{ p.quantidadeVendida }}</td>
+                  <td class="text-right">{{ money(p.valorTotalVendido) }}</td>
+                  <td class="text-right text-success font-bold">{{ money(p.lucroEstimado) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mobile-cards-list">
+            <article
+              v-for="p in relatorio.produtosMaisVendidos"
+              :key="`${p.produtoId}-${p.tamanho}-${p.cor}`"
+              class="mobile-product-card"
+            >
+              <div class="mobile-card-top">
+                <strong class="mobile-card-title">{{ p.nome }}</strong>
+                <span class="mobile-card-tag">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</span>
+              </div>
+              <div class="mobile-card-metrics">
+                <div class="mobile-metric-item">
+                  <span class="m-label">Vendas</span>
+                  <strong class="m-value">{{ p.quantidadeVendida }} un</strong>
+                </div>
+                <div class="mobile-metric-item">
+                  <span class="m-label">Faturamento</span>
+                  <strong class="m-value">{{ money(p.valorTotalVendido) }}</strong>
+                </div>
+                <div class="mobile-metric-item">
+                  <span class="m-label">Lucro est.</span>
+                  <strong class="m-value text-success">{{ money(p.lucroEstimado) }}</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+        <p v-else class="empty-notice">Nenhuma peça vendida no período.</p>
+      </div>
+
+      <div v-if="subTabPecas === 'estoqueBaixo' || subTabPecas === 'todas'" class="content-box" :class="{ 'mt-16': subTabPecas === 'todas' }">
+        <div class="box-header-wrap">
+          <h3 class="box-title">Peças com pouco estoque</h3>
+          <p class="box-desc">Itens próximos ou abaixo do limite mínimo configurado</p>
+        </div>
+        <div v-if="relatorio?.produtosEstoqueBaixo.length">
+          <div class="table-container desktop-table-view">
+            <table class="styled-table">
+              <thead>
+                <tr>
+                  <th>Peça</th>
+                  <th>Tam/Cor</th>
+                  <th class="text-right">Atual</th>
+                  <th class="text-right">Mínimo</th>
+                  <th>Situação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in relatorio.produtosEstoqueBaixo" :key="`${p.produtoId}-${p.tamanho}-${p.cor}`">
+                  <td><strong>{{ p.nome }}</strong></td>
+                  <td class="text-muted">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</td>
+                  <td class="text-right font-bold">{{ p.estoqueAtual }}</td>
+                  <td class="text-right text-muted">{{ p.estoqueMinimo }}</td>
+                  <td>
+                    <span class="pill-badge" :class="p.estoqueAtual === 0 ? 'danger' : 'warning'">
+                      {{ p.statusEstoque }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mobile-cards-list">
+            <article
+              v-for="p in relatorio.produtosEstoqueBaixo"
+              :key="`${p.produtoId}-${p.tamanho}-${p.cor}`"
+              class="mobile-product-card"
+            >
+              <div class="mobile-card-top">
+                <strong class="mobile-card-title">{{ p.nome }}</strong>
+                <span class="pill-badge" :class="p.estoqueAtual === 0 ? 'danger' : 'warning'">
+                  {{ p.statusEstoque }}
+                </span>
+              </div>
+              <span class="mobile-card-subtitle">{{ p.tamanho || '-' }} / {{ p.cor || '-' }}</span>
+              <div class="mobile-card-metrics">
+                <div class="mobile-metric-item">
+                  <span class="m-label">Estoque atual</span>
+                  <strong class="m-value" :class="p.estoqueAtual === 0 ? 'text-danger' : ''">{{ p.estoqueAtual }} un</strong>
+                </div>
+                <div class="mobile-metric-item">
+                  <span class="m-label">Estoque mínimo</span>
+                  <span class="m-value">{{ p.estoqueMinimo }} un</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+        <p v-else class="empty-notice">Todas as peças estão com níveis adequados de estoque.</p>
+      </div>
+
+      <div v-if="subTabPecas === 'paradas' || subTabPecas === 'todas'" class="content-box" :class="{ 'mt-16': subTabPecas === 'todas' }">
+        <div class="box-header-wrap">
+          <h3 class="box-title">Peças paradas (> 30 dias sem venda)</h3>
+          <p class="box-desc">Produtos sem giro nos últimos 30 dias para estratégias de remarcação e queima</p>
+        </div>
         <div v-if="relatorio?.produtosParados.length">
           <div class="table-container desktop-table-view">
             <table class="styled-table">
@@ -630,7 +712,6 @@ onMounted(() => {
             <table class="styled-table">
               <thead>
                 <tr>
-                  <th style="width: 38px;"></th>
                   <th>Peça</th>
                   <th>Categoria</th>
                   <th>Tamanho / Cor</th>
@@ -642,9 +723,6 @@ onMounted(() => {
               </thead>
               <tbody>
                 <tr v-for="item in relatorio.sugestoesReposicao" :key="`${item.produtoId}-${item.tamanho}-${item.cor}`">
-                  <td class="text-center">
-                    <span class="check-box-ui"></span>
-                  </td>
                   <td><strong>{{ item.nome }}</strong></td>
                   <td>{{ item.categoriaNome }}</td>
                   <td class="text-muted">{{ item.tamanho || '-' }} / {{ item.cor || '-' }}</td>
@@ -699,9 +777,39 @@ onMounted(() => {
     </div>
 
     <div v-else-if="activeTab === 'tamanhos'" class="tab-pane">
-      <div class="two-columns-grid">
-        <div class="content-box">
-          <h3 class="box-title">Análise por tamanho</h3>
+      <div class="subnav-segmented" role="tablist">
+        <button
+          type="button"
+          class="subnav-pill"
+          :class="{ active: subTabTamanhos === 'ambos' }"
+          @click="subTabTamanhos = 'ambos'"
+        >
+          <span>Visão completa</span>
+        </button>
+        <button
+          type="button"
+          class="subnav-pill"
+          :class="{ active: subTabTamanhos === 'tamanhos' }"
+          @click="subTabTamanhos = 'tamanhos'"
+        >
+          <span>Tamanhos</span>
+        </button>
+        <button
+          type="button"
+          class="subnav-pill"
+          :class="{ active: subTabTamanhos === 'clientes' }"
+          @click="subTabTamanhos = 'clientes'"
+        >
+          <span>Melhores clientes</span>
+        </button>
+      </div>
+
+      <div :class="subTabTamanhos === 'ambos' ? 'two-columns-grid' : 'single-column-grid'">
+        <div v-if="subTabTamanhos === 'ambos' || subTabTamanhos === 'tamanhos'" class="content-box">
+          <div class="box-header-wrap">
+            <h3 class="box-title">Análise por tamanho</h3>
+            <p class="box-desc">Giro de estoque e faturamento por grade</p>
+          </div>
           <div v-if="relatorio?.analiseTamanhos.length">
             <div class="table-container desktop-table-view">
               <table class="styled-table">
@@ -764,8 +872,11 @@ onMounted(() => {
           <p v-else class="empty-notice">Sem dados de tamanhos para o período selecionado.</p>
         </div>
 
-        <div class="content-box">
-          <h3 class="box-title">Melhores clientes</h3>
+        <div v-if="subTabTamanhos === 'ambos' || subTabTamanhos === 'clientes'" class="content-box">
+          <div class="box-header-wrap">
+            <h3 class="box-title">Melhores clientes</h3>
+            <p class="box-desc">Clientes com maior volume financeiro e compras no período</p>
+          </div>
           <div v-if="relatorio?.melhoresClientes.length">
             <div class="table-container desktop-table-view">
               <table class="styled-table">
@@ -828,38 +939,125 @@ onMounted(() => {
 .relatorios-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
-.report-top-header {
+.report-topbar {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.header-tag {
-  color: #b33f62;
-  font-size: 0.76rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-}
-
-.header-title {
+.report-topbar .header-title {
   margin: 0;
-  font-size: 1.65rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: #25201f;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.3px;
+}
+
+.report-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-report-ghost {
+  min-height: 38px;
+  padding: 0 14px;
+  background: transparent;
+  color: #625955;
+  border: 1px solid #d8cfca;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-report-ghost:hover:not(:disabled) {
+  background: #eee7e3;
+  color: #25201f;
+  border-color: #bfaea6;
+}
+
+.btn-report-filter {
+  min-height: 38px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #25201f;
+  border: 1px solid #d8cfca;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.btn-report-filter:hover:not(:disabled) {
+  background: #f7f3f1;
+  border-color: #bfaea6;
+}
+
+.btn-report-filter.has-filter {
+  border-color: #ecc5ce;
+  background: #fdf8f9;
+  color: #7b2943;
+}
+
+.filter-dot-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b33f62;
+  display: inline-block;
+}
+
+.btn-report-export {
+  min-height: 38px;
+  padding: 0 18px;
+  background: #b33f62;
+  color: #ffffff;
+  border: 0;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(179, 63, 98, 0.25);
+}
+
+.btn-report-export:hover:not(:disabled) {
+  background: #9d3556;
+}
+
+.btn-report-ghost:disabled,
+.btn-report-filter:disabled,
+.btn-report-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .feedback-alert {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 8px;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
 }
 
@@ -875,126 +1073,61 @@ onMounted(() => {
   color: #9f1239;
 }
 
-.report-summary-card {
+.report-filter-bar {
   background: #ffffff;
   border: 1px solid #e5ddd8;
-  border-radius: 12px;
-  padding: 18px 22px;
+  border-radius: 8px;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  box-shadow: 0 4px 18px rgba(48, 35, 30, 0.05);
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.summary-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: 0;
-}
-
-.summary-badge-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  background: #fbf5f7;
-  color: #b33f62;
-  border: 1px solid rgba(179, 63, 98, 0.18);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.summary-text-block {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.summary-name {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #25201f;
-  letter-spacing: -0.2px;
-}
-
-.summary-details {
+.filter-chips {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.82rem;
-  color: #6b5f5a;
+  font-size: 0.8rem;
+  color: #625955;
 }
 
-.detail-label {
-  font-weight: 700;
-  color: #3b3331;
-}
-
-.detail-sep {
-  color: #d1c7c2;
-}
-
-.summary-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.btn-filter-modal {
+.filter-chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 0 16px;
-  background: #ffffff;
-  color: #3b3331;
-  border: 1px solid #d8cfca;
-  border-radius: 8px;
-  font-size: 0.88rem;
+  gap: 5px;
+}
+
+.chip-label {
+  color: #8b807b;
+  font-weight: 500;
+}
+
+.chip-sep {
+  color: #d8cfca;
+}
+
+.filter-clear-wrap {
+  margin-left: auto;
+}
+
+.btn-clear-inline {
+  background: transparent;
+  border: 0;
+  color: #b91c1c;
+  font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.16s ease;
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  min-height: auto;
 }
 
-.btn-filter-modal:hover:not(:disabled) {
-  background: #f7f3f1;
-  border-color: #baa8a1;
-  color: #25201f;
-}
-
-.btn-export-pdf {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 0 20px;
-  background: #b33f62;
-  color: #ffffff;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.16s ease;
-  box-shadow: 0 4px 14px rgba(179, 63, 98, 0.28);
-}
-
-.btn-export-pdf:hover:not(:disabled) {
-  background: #9d3556;
-  box-shadow: 0 6px 18px rgba(179, 63, 98, 0.36);
-}
-
-.btn-filter-modal:disabled,
-.btn-export-pdf:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.btn-clear-inline:hover {
+  background: #fff0f2;
 }
 
 .btn-spinner {
@@ -1233,44 +1366,109 @@ onMounted(() => {
   border-radius: 10px;
 }
 
-.tab-pane {
+.badge-tab-warning {
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.subnav-segmented {
+  display: inline-flex;
+  align-items: center;
+  background: #f4f1ee;
+  border: 1px solid #e5ddd8;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.subnav-pill {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: #6b5f5a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.subnav-pill:hover:not(.active) {
+  color: #25201f;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.subnav-pill.active {
+  background: #ffffff;
+  color: #9d3556;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.subnav-pill-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: #eee7e3;
+  color: #625955;
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.subnav-pill.active .subnav-pill-badge {
+  background: #fdf2f5;
+  color: #9d3556;
+}
+
+.subnav-pill-badge.warning {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.single-column-grid {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.tab-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   animation: fadeIn 0.2s ease;
 }
 
 .metrics-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
 }
 
 .stat-card {
   background: #ffffff;
   border: 1px solid #e5ddd8;
-  border-radius: 12px;
-  padding: 20px 22px;
+  border-radius: 10px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 4px 16px rgba(48, 35, 30, 0.04);
+  gap: 3px;
+  box-shadow: 0 2px 8px rgba(48, 35, 30, 0.03);
+  transition: border-color 0.15s ease;
 }
 
-.stat-card.primary {
-  border-left: 4px solid #b33f62;
-}
-
-.stat-card.success {
-  border-left: 4px solid #10b981;
-}
-
-.stat-card.accent {
-  border-left: 4px solid #7b1fa2;
-}
-
-.stat-card.info {
-  border-left: 4px solid #0284c7;
+.stat-card:hover {
+  border-color: #d8cfca;
 }
 
 .stat-caption {
@@ -1638,15 +1836,14 @@ onMounted(() => {
   .two-columns-grid {
     grid-template-columns: 1fr;
   }
-  .report-summary-card {
+  .report-topbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
-  .summary-actions {
-    justify-content: stretch;
-  }
-  .summary-actions button {
-    flex: 1;
+  .report-topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
   .form-grid-modal {
     grid-template-columns: 1fr;
@@ -1665,57 +1862,47 @@ onMounted(() => {
     margin-top: 12px;
   }
 
-  .tab-label-desktop {
-    display: none;
+  .report-topbar .header-title {
+    font-size: 1.25rem;
   }
 
-  .tab-label-mobile {
-    display: inline;
+  .report-topbar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
   }
 
-  .header-tag {
-    font-size: 0.7rem;
-    letter-spacing: 0.6px;
+  .btn-report-ghost {
+    grid-column: span 2;
+    justify-content: center;
   }
 
-  .header-title {
-    font-size: 1.3rem;
-    letter-spacing: -0.3px;
+  .btn-report-filter,
+  .btn-report-export {
+    justify-content: center;
+    width: 100%;
+    font-size: 0.82rem;
+    padding: 0 10px;
   }
 
-  .report-summary-card {
-    padding: 14px 16px;
-    gap: 14px;
-    border-radius: 10px;
+  .report-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
   }
 
-  .summary-badge-icon {
-    width: 38px;
-    height: 38px;
-  }
-
-  .summary-name {
-    font-size: 0.95rem;
-  }
-
-  .summary-details {
+  .filter-chips {
     font-size: 0.76rem;
     gap: 6px;
   }
 
-  .summary-actions {
+  .filter-clear-wrap {
+    margin-left: 0;
     width: 100%;
-    display: flex;
-    gap: 8px;
-  }
-
-  .btn-filter-modal,
-  .btn-export-pdf {
-    flex: 1;
-    min-height: 40px;
-    padding: 0 10px;
-    font-size: 0.8rem;
-    justify-content: center;
+    padding-top: 4px;
+    border-top: 1px dashed #eee7e3;
   }
 
   .report-nav-tabs {
@@ -1753,6 +1940,31 @@ onMounted(() => {
   .nav-tab-btn.active .badge-tab-counter {
     background: #ffffff;
     color: #b33f62;
+  }
+
+  .nav-tab-btn.active .badge-tab-warning {
+    background: #ffffff;
+    color: #92400e;
+  }
+
+  .subnav-segmented {
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 3px;
+  }
+
+  .subnav-segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  .subnav-pill {
+    flex: 1;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 0.75rem;
+    min-height: 30px;
   }
 
   .metrics-container {
@@ -1848,13 +2060,9 @@ onMounted(() => {
     gap: 8px;
   }
 
-  .summary-actions {
-    flex-direction: column;
-  }
-
-  .btn-filter-modal,
-  .btn-export-pdf {
-    width: 100%;
+  .subnav-pill {
+    padding: 0 6px;
+    font-size: 0.72rem;
   }
 }
 </style>
