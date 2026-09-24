@@ -29,7 +29,7 @@ public class ProdutoService : IProdutoService
             query = query.Where(p => p.Nome.ToLower().Contains(termo) 
                                   || (p.Descricao != null && p.Descricao.ToLower().Contains(termo))
                                   || (p.Marca != null && p.Marca.ToLower().Contains(termo))
-                                  || p.Variacoes.Any(v => v.Status != Status.Deletado 
+                                  || p.Variacoes.Any(v => v.Status == Status.Ativo 
                                                        && (v.Cor.ToLower().Contains(termo) || v.Tamanho.ToLower().Contains(termo))));
         }
 
@@ -41,18 +41,22 @@ public class ProdutoService : IProdutoService
         if (!string.IsNullOrWhiteSpace(filtro.Tamanho))
         {
             var tam = filtro.Tamanho.Trim().ToLower();
-            query = query.Where(p => p.Variacoes.Any(v => v.Status != Status.Deletado && v.Tamanho.ToLower() == tam));
+            query = query.Where(p => p.Variacoes.Any(v => v.Status == Status.Ativo && v.Tamanho.ToLower() == tam));
         }
 
         if (!string.IsNullOrWhiteSpace(filtro.Cor))
         {
             var cor = filtro.Cor.Trim().ToLower();
-            query = query.Where(p => p.Variacoes.Any(v => v.Status != Status.Deletado && v.Cor.ToLower() == cor));
+            query = query.Where(p => p.Variacoes.Any(v => v.Status == Status.Ativo && v.Cor.ToLower() == cor));
         }
 
         if (filtro.Status.HasValue)
         {
             query = query.Where(p => p.Status == filtro.Status.Value);
+        }
+        else
+        {
+            query = query.Where(p => p.Status == Status.Ativo);
         }
 
         if (filtro.ApenasEmEstoque == true)
@@ -247,7 +251,6 @@ public class ProdutoService : IProdutoService
                 }
             }
 
-            // Fetch ALL variations in DB for this product (including soft-deleted and inactive) to avoid unique constraint collisions
             var allVarsInDb = await _unitOfWork.VariacoesProduto.QueryIgnoreFilters()
                 .Where(v => v.ProdutoId == id)
                 .ToListAsync(cancellationToken);
@@ -311,7 +314,6 @@ public class ProdutoService : IProdutoService
                 }
                 else
                 {
-                    // No ID provided. Check if a variation with this exact (Tamanho, Cor) already exists in DB (even if Deletado or Inativo)
                     var existingWithSameAttributes = allVarsInDb.FirstOrDefault(v => 
                         v.Tamanho.Trim().ToLower() == normTamanhoLower && 
                         v.Cor.Trim().ToLower() == normCorLower);
@@ -401,7 +403,6 @@ public class ProdutoService : IProdutoService
                 }
             }
 
-            // Remove/inactivate active variations that were omitted from the update payload
             var activeDbVars = allVarsInDb.Where(v => v.Status != Status.Deletado).ToList();
             foreach (var activeVar in activeDbVars)
             {
@@ -542,7 +543,7 @@ public class ProdutoService : IProdutoService
         CreatedAt = p.CreatedAt,
         UpdatedAt = p.UpdatedAt,
         Variacoes = p.Variacoes
-            .Where(v => v.Status != Status.Deletado)
+            .Where(v => v.Status == Status.Ativo)
             .Select(v => new VariacaoProdutoDto
             {
                 Id = v.Id,

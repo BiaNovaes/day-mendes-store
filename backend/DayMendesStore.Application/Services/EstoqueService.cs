@@ -38,8 +38,8 @@ public class EstoqueService : IEstoqueService
     public async Task<EstoqueProdutoDto> GetSaldoPorProdutoAsync(int produtoId, CancellationToken cancellationToken = default)
     {
         var produto = await _unitOfWork.Produtos.Query()
-            .Where(p => p.Id == produtoId && p.Status != Status.Deletado)
-            .Include(p => p.Variacoes.Where(v => v.Status != Status.Deletado))
+            .Where(p => p.Id == produtoId && p.Status == Status.Ativo)
+            .Include(p => p.Variacoes.Where(v => v.Status == Status.Ativo))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (produto == null)

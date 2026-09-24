@@ -205,7 +205,7 @@ public class RelatorioService : IRelatorioService
             }
 
             var diasSemVenda = (int)(agora - dataReferencia).TotalDays;
-            var estoqueTotal = p.Variacoes.Where(v => v.Status == Status.Ativo).Sum(v => v.QuantidadeEstoque);
+            var estoqueTotal = p.Variacoes.Where(v => v.Status != Status.Deletado).Sum(v => v.QuantidadeEstoque);
 
             resultado.Add(new ProdutoSemVendaDto
             {
@@ -213,8 +213,8 @@ public class RelatorioService : IRelatorioService
                 Nome = p.Nome,
                 Foto = p.Foto,
                 CategoriaNome = p.Categoria?.Nome ?? string.Empty,
-                Tamanho = string.Join(", ", p.Variacoes.Where(v => v.Status == Status.Ativo).Select(v => v.Tamanho).Distinct()),
-                Cor = string.Join(", ", p.Variacoes.Where(v => v.Status == Status.Ativo).Select(v => v.Cor).Distinct()),
+                Tamanho = string.Join(", ", p.Variacoes.Where(v => v.Status != Status.Deletado).Select(v => v.Tamanho).Distinct()),
+                Cor = string.Join(", ", p.Variacoes.Where(v => v.Status != Status.Deletado).Select(v => v.Cor).Distinct()),
                 EstoqueAtual = estoqueTotal,
                 ValorVenda = p.ValorVenda,
                 DiasSemVenda = diasSemVenda,
@@ -249,7 +249,7 @@ public class RelatorioService : IRelatorioService
             .Select(p => new
             {
                 Produto = p,
-                EstoqueAtual = p.Variacoes.Where(v => v.Status == Status.Ativo).Sum(v => v.QuantidadeEstoque)
+                EstoqueAtual = p.Variacoes.Where(v => v.Status != Status.Deletado).Sum(v => v.QuantidadeEstoque)
             })
             .Where(x => x.EstoqueAtual <= x.Produto.EstoqueMinimo)
             .OrderBy(x => x.EstoqueAtual)
@@ -259,8 +259,8 @@ public class RelatorioService : IRelatorioService
                 Nome = x.Produto.Nome,
                 Foto = x.Produto.Foto,
                 CategoriaNome = x.Produto.Categoria != null ? x.Produto.Categoria.Nome : "",
-                Tamanho = string.Join(", ", x.Produto.Variacoes.Where(v => v.Status == Status.Ativo).Select(v => v.Tamanho).Distinct()),
-                Cor = string.Join(", ", x.Produto.Variacoes.Where(v => v.Status == Status.Ativo).Select(v => v.Cor).Distinct()),
+                Tamanho = string.Join(", ", x.Produto.Variacoes.Where(v => v.Status != Status.Deletado).Select(v => v.Tamanho).Distinct()),
+                Cor = string.Join(", ", x.Produto.Variacoes.Where(v => v.Status != Status.Deletado).Select(v => v.Cor).Distinct()),
                 EstoqueAtual = x.EstoqueAtual,
                 EstoqueMinimo = x.Produto.EstoqueMinimo,
                 StatusEstoque = x.EstoqueAtual == 0 ? "Zerado" : "Abaixo do Mínimo"
@@ -298,7 +298,7 @@ public class RelatorioService : IRelatorioService
         var itens = await GetBaseItensQuery(filtro).ToListAsync(cancellationToken);
         var variacoes = await _unitOfWork.VariacoesProduto.Query()
             .Include(v => v.Produto)
-            .Where(v => v.Status == Status.Ativo && v.Produto != null && v.Produto.Status == Status.Ativo)
+            .Where(v => v.Status != Status.Deletado && v.Produto != null && v.Produto.Status == Status.Ativo)
             .ToListAsync(cancellationToken);
 
         var totalVendidoGeral = itens.Sum(i => i.Quantidade);
@@ -398,7 +398,6 @@ public class RelatorioService : IRelatorioService
         var produtos = await produtosQuery.ToListAsync(cancellationToken);
         var produtoIds = produtos.Select(p => p.Id).ToList();
 
-        // 30 days lookback for velocity
         var dataLimite30Dias = DateTime.UtcNow.AddDays(-30);
         var vendas30DiasPorProduto = await _unitOfWork.ItensVenda.Query()
             .Where(i => produtoIds.Contains(i.ProdutoId) 
@@ -417,7 +416,7 @@ public class RelatorioService : IRelatorioService
 
         foreach (var p in produtos)
         {
-            var estoqueAtual = p.Variacoes.Where(v => v.Status == Status.Ativo).Sum(v => v.QuantidadeEstoque);
+            var estoqueAtual = p.Variacoes.Where(v => v.Status != Status.Deletado).Sum(v => v.QuantidadeEstoque);
             if (estoqueAtual > p.EstoqueMinimo)
             {
                 continue;
@@ -448,8 +447,8 @@ public class RelatorioService : IRelatorioService
                 Nome = p.Nome,
                 Foto = p.Foto,
                 CategoriaNome = p.Categoria?.Nome ?? string.Empty,
-                Tamanho = string.Join(", ", p.Variacoes.Where(v => v.Status == Status.Ativo).Select(v => v.Tamanho).Distinct()),
-                Cor = string.Join(", ", p.Variacoes.Where(v => v.Status == Status.Ativo).Select(v => v.Cor).Distinct()),
+                Tamanho = string.Join(", ", p.Variacoes.Where(v => v.Status != Status.Deletado).Select(v => v.Tamanho).Distinct()),
+                Cor = string.Join(", ", p.Variacoes.Where(v => v.Status != Status.Deletado).Select(v => v.Cor).Distinct()),
                 EstoqueAtual = estoqueAtual,
                 EstoqueMinimo = p.EstoqueMinimo,
                 VendasUltimos30Dias = vendas30,
