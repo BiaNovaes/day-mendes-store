@@ -7,6 +7,7 @@ import Relatorio from './components/Relatorio.vue'
 import Vendas from './components/vendas/Vendas.vue'
 import Pdv from './components/pdv/Pdv.vue'
 import Login from './pages/Login.vue'
+import Produtos from './components/produtos/Produtos.vue'
 
 const loading = ref(false)
 const error = ref('')
@@ -19,9 +20,7 @@ const categorias = ref<Categoria[]>([])
 const produtos = ref<Produto[]>([])
 const clientes = ref<Cliente[]>([])
 const vendas = ref<Venda[]>([])
-const categoriaForm = reactive({ nome: '', descricao: '' })
 const clienteForm = reactive({ nome: '', apelido: '', email: '', telefone: '', endereco: '' })
-const produtoForm = reactive({ nome: '', marca: '', descricao: '', categoriaId: '', valorCompra: '', valorVenda: '', estoqueMinimo: '1', tamanho: '', cor: '', quantidadeEstoque: '0' })
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const menu: Array<{ id: View; label: string }> = [
   { id: 'dashboard', label: 'Painel' },
@@ -51,21 +50,6 @@ function money(value?: number) { return currency.format(value ?? 0) }
 function statusText(status: number) { return status === 1 ? 'Ativo' : 'Inativo' }
 function vendaStatus(status: number) { return ({ 1: 'Rascunho', 2: 'Finalizada', 3: 'Cancelada' } as Record<number, string>)[status] ?? 'Pendente' }
 function saleDate(date: string) { return new Date(date).toLocaleDateString('pt-BR') }
-function generatedBarcode(produto: Produto, variacao: VariacaoProduto) { return `DMS${String(produto.id).padStart(5, '0')}${String(variacao.id).padStart(5, '0')}` }
-function escapeHtml(value: string) { return value.replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char] ?? char) }
-function code39Svg(value: string) {
-  const patterns: Record<string, string> = { '0': 'nnnwwnwnn', '1': 'wnnwnnnnw', '2': 'nnwwnnnnw', '3': 'wnwwnnnnn', '4': 'nnnwwnnnw', '5': 'wnnwwnnnn', '6': 'nnwwwnnnn', '7': 'nnnwnnwnw', '8': 'wnnwnnwnn', '9': 'nnwwnnwnn', A: 'wnnnnwnnw', B: 'nnwnnwnnw', C: 'wnwnnwnnn', D: 'nnnnwwnnw', E: 'wnnnwwnnn', F: 'nnwnwwnnn', G: 'nnnnnwwnw', H: 'wnnnnwwnn', I: 'nnwnnwwnn', J: 'nnnnwwwnn', K: 'wnnnnnnww', L: 'nnwnnnnww', M: 'wnwnnnnwn', N: 'nnnnwnnww', O: 'wnnnwnnwn', P: 'nnwnwnnwn', Q: 'nnnnnnwww', R: 'wnnnnnwwn', S: 'nnwnnnwwn', T: 'nnnnwnwwn', U: 'wwnnnnnnw', V: 'nwwnnnnnw', W: 'wwwnnnnnn', X: 'nwnnwnnnw', Y: 'wwnnwnnnn', Z: 'nwwnwnnnn', '-': 'nwnnnnwnw', '.': 'wwnnnnwnn', ' ': 'nwwnnnwnn', '$': 'nwnwnwnnn', '/': 'nwnwnnnwn', '+': 'nwnnnwnwn', '%': 'nnnwnwnwn', '*': 'nwnnwnwnn' }
-  const text = `*${value.toUpperCase().replace(/[^0-9A-Z ./$+%-]/g, '')}*`
-  let x = 0
-  const bars: string[] = []
-  for (const char of text) {
-    const pattern = patterns[char]
-    if (!pattern) continue
-    pattern.split('').forEach((widthKey, index) => { const width = widthKey === 'w' ? 3 : 1; if (index % 2 === 0) bars.push(`<rect x="${x}" y="0" width="${width}" height="70"/>`); x += width })
-    x += 1
-  }
-  return `<svg class="barcode" viewBox="0 0 ${x} 70" preserveAspectRatio="none">${bars.join('')}</svg>`
-}
 async function loadAll() {
   loading.value = true; error.value = ''
   try { const [perfil, dashboardData, estoqueData, categoriaData, produtoData, clienteData, vendaData] = await Promise.all([api.perfil(), api.dashboard(), api.estoqueBaixo(), api.categorias(), api.produtos(), api.clientes(), api.vendas()]); lojaNome.value = perfil.nome; dashboard.value = dashboardData; estoqueBaixo.value = estoqueData; categorias.value = categoriaData.items; produtos.value = produtoData.items; clientes.value = clienteData.items; vendas.value = vendaData.items } catch (err) { error.value = err instanceof Error ? err.message : 'Nao foi possivel carregar os dados.'; if (error.value.includes('401')) logout() } finally { loading.value = false }
@@ -77,11 +61,7 @@ async function handleLoginSuccess(loja: Loja) {
 }
 function logout() { clearAuthToken(); isAuthenticated.value = false }
 async function runAndReload(action: () => Promise<void>) { loading.value = true; error.value = ''; try { await action(); await loadAll() } catch (err) { error.value = err instanceof Error ? err.message : 'Operacao nao concluida.' } finally { loading.value = false } }
-async function saveCategoria() { await runAndReload(async () => { await api.salvarCategoria(categoriaForm); categoriaForm.nome = ''; categoriaForm.descricao = '' }) }
 async function saveCliente() { await runAndReload(async () => { await api.salvarCliente(clienteForm); Object.assign(clienteForm, { nome: '', apelido: '', email: '', telefone: '', endereco: '' }) }) }
-async function saveProduto() { await runAndReload(async () => { await api.salvarProduto({ categoriaId: Number(produtoForm.categoriaId), nome: produtoForm.nome, marca: produtoForm.marca || null, descricao: produtoForm.descricao || null, valorCompra: Number(produtoForm.valorCompra), valorVenda: Number(produtoForm.valorVenda), estoqueMinimo: Number(produtoForm.estoqueMinimo), variacoes: [{ tamanho: produtoForm.tamanho, cor: produtoForm.cor, quantidadeEstoque: Number(produtoForm.quantidadeEstoque) }] }); Object.assign(produtoForm, { nome: '', marca: '', descricao: '', categoriaId: '', valorCompra: '', valorVenda: '', estoqueMinimo: '1', tamanho: '', cor: '', quantidadeEstoque: '0' }) }) }
-function printLabel(produto: Produto, variacao: VariacaoProduto) { const code = generatedBarcode(produto, variacao); const label = window.open('', 'etiqueta', 'width=420,height=320'); if (!label) return; label.document.write(`<!doctype html><html><head><title>Etiqueta ${code}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:18px}.label{border:1px solid #111;width:300px;height:180px;display:grid;place-items:center;text-align:center;padding:10px}.name{font-weight:700;font-size:16px}.meta{font-size:12px}.price{font-size:18px;font-weight:700}.barcode{display:block;width:250px;height:70px;margin:8px auto 4px}.code{font-size:12px;letter-spacing:1px}</style></head><body><div class="label"><div><div class="name">${escapeHtml(produto.nome)}</div><div class="meta">${escapeHtml(variacao.tamanho)} / ${escapeHtml(variacao.cor)}</div><div class="price">${money(produto.valorVenda)}</div>${code39Svg(code)}<div class="code">${code}</div></div></div><scr` + `ipt>window.print()</scr` + `ipt></body></html>`); label.document.close() }
-function printProductLabels(produto: Produto) { produto.variacoes.filter((variacao) => variacao.status === 1).forEach((variacao) => printLabel(produto, variacao)) }
 onMounted(() => { if (isAuthenticated.value) loadAll() })
 </script>
 
@@ -95,16 +75,23 @@ onMounted(() => { if (isAuthenticated.value) loadAll() })
       @logout="logout"
     />
     <section class="content">
-      <header v-if="view !== 'relatorios' && view !== 'vendas'" class="topbar">
+      <header v-if="view !== 'relatorios' && view !== 'vendas' && view !== 'produtos'" class="topbar">
         <div>
           <p class="eyebrow">{{ loading ? 'Sincronizando' : 'Day Mendes Store' }}</p>
           <h1>{{ currentTitle }}</h1>
         </div>
         <button type="button" @click="loadAll" :disabled="loading">Atualizar</button>
       </header>
-      <p v-if="error && view !== 'relatorios' && view !== 'vendas'" class="error">{{ error }}</p>
+      <p v-if="error && view !== 'relatorios' && view !== 'vendas' && view !== 'produtos'" class="error">{{ error }}</p>
       <section v-if="view === 'dashboard'" class="stack"><div class="metrics"><article><span>Faturamento</span><strong>{{ money(dashboard?.totalFaturado) }}</strong></article><article><span>Vendas</span><strong>{{ dashboard?.totalVendas ?? 0 }}</strong></article><article><span>Ticket medio</span><strong>{{ money(dashboard?.ticketMedio) }}</strong></article><article><span>Estoque</span><strong>{{ totalEstoque }}</strong></article></div><div class="panel"><h2>Estoque baixo</h2><div class="table"><div v-for="item in estoqueBaixo" :key="`${item.produtoId}-${item.tamanho}-${item.cor}`" class="row three"><span>{{ item.nome }}<small>{{ item.categoriaNome }}</small></span><span>{{ item.tamanho }} / {{ item.cor }}</span><strong>{{ item.estoqueAtual }}</strong></div></div><p v-if="!estoqueBaixo.length" class="empty">Nenhum produto abaixo do minimo.</p></div></section>
-      <section v-if="view === 'produtos'" class="split"><form class="panel form-grid" @submit.prevent="saveProduto"><h2>Novo produto</h2><label>Nome <input v-model="produtoForm.nome" required></label><label>Categoria <select v-model="produtoForm.categoriaId" required><option value="">Selecione</option><option v-for="categoria in categorias" :key="categoria.id" :value="categoria.id">{{ categoria.nome }}</option></select></label><label>Marca <input v-model="produtoForm.marca"></label><label>Descricao <textarea v-model="produtoForm.descricao"></textarea></label><div class="inline-fields"><label>Compra <input v-model="produtoForm.valorCompra" type="number" min="0" step="0.01" required></label><label>Venda <input v-model="produtoForm.valorVenda" type="number" min="0" step="0.01" required></label><label>Minimo <input v-model="produtoForm.estoqueMinimo" type="number" min="0" required></label></div><div class="inline-fields"><label>Tamanho <input v-model="produtoForm.tamanho" required></label><label>Cor <input v-model="produtoForm.cor" required></label><label>Qtd. <input v-model="produtoForm.quantidadeEstoque" type="number" min="0" required></label></div><button :disabled="loading">Cadastrar produto</button></form><div class="stack"><form class="panel form-grid" @submit.prevent="saveCategoria"><h2>Nova categoria</h2><label>Nome <input v-model="categoriaForm.nome" required></label><label>Descricao <input v-model="categoriaForm.descricao"></label><button :disabled="loading">Cadastrar categoria</button></form><div class="panel table-panel"><h2>Catalogo</h2><div class="table"><div v-for="produto in produtos" :key="produto.id" class="row"><span>{{ produto.nome }}<small>{{ produto.variacoes[0] ? generatedBarcode(produto, produto.variacoes[0]) : 'Sem codigo' }}</small></span><strong>{{ money(produto.valorVenda) }}</strong><span>{{ produto.estoqueTotal }}</span><button class="ghost small-button" @click="printProductLabels(produto)">Etiquetas</button></div></div></div></div></section>
+      <section v-if="view === 'produtos'" class="stack">
+        <Produtos
+          :produtos="produtos"
+          :categorias="categorias"
+          :loading="loading"
+          @refresh="loadAll"
+        />
+      </section>
       <section v-if="view === 'clientes'" class="split">
         <form class="panel form-grid" @submit.prevent="saveCliente">
           <h2>Novo cliente</h2>
