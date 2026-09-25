@@ -192,6 +192,13 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Mantém o schema atualizado quando a aplicação inicia, inclusive no Docker.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+}
+
 // Pipeline Configuration
 app.UseMiddleware<ExceptionMiddleware>();
 

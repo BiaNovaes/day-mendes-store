@@ -170,6 +170,28 @@ day-mendes-store/
 
 ## Como Executar Localmente
 
+### Execução com Docker (recomendado)
+
+1. Copie `.env.example` para `.env` e defina senhas seguras, principalmente
+   `JWT_SECRET_KEY`, `DOCKER_DB_PASSWORD` e `DB_ROOT_PASSWORD`.
+2. Na raiz do projeto, execute:
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+3. Acesse a aplicação em `http://localhost:8080`. A API também fica exposta em
+   `http://localhost:5114` para acesso direto.
+
+As migrations são aplicadas automaticamente quando a API inicia. Os dados do
+MySQL e as imagens enviadas ficam persistidos nos volumes `mysql_data` e
+`uploads_data`.
+
+Para acompanhar os serviços, use `docker compose logs -f`. Para encerrá-los,
+use `docker compose down` (sem `-v`, para preservar os dados).
+
+---
+
 ### Pré-requisitos
 * [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) instalado.
 * [Node.js](https://nodejs.org/) (versão 22 ou superior) instalado.
