@@ -190,6 +190,29 @@ MySQL e as imagens enviadas ficam persistidos nos volumes `mysql_data` e
 Para acompanhar os serviços, use `docker compose logs -f`. Para encerrá-los,
 use `docker compose down` (sem `-v`, para preservar os dados).
 
+#### Após clonar o projeto no Windows (PowerShell)
+
+Execute na raiz do projeto:
+
+```powershell
+(Get-Content .env.example) -replace '^JWT_SECRET_KEY=.*$', ('JWT_SECRET_KEY=' + [guid]::NewGuid().ToString('N')) | Set-Content .env
+docker compose up -d
+```
+
+A aplicação estará em `http://localhost:8080`. Para visualizar o banco no
+DBeaver ou MySQL Workbench, use:
+
+```text
+Host: localhost
+Porta: 3306
+Banco: day_mendes_store
+Usuário: daymendes
+Senha: daymendes_local
+```
+
+Essas credenciais são apenas para execução local. Não exponha a porta 3306 nem
+use essas senhas em um servidor público.
+
 ---
 
 ### Pré-requisitos
